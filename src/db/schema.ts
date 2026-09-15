@@ -277,3 +277,46 @@ export type StockMovement = typeof stockMovements.$inferSelect;
 
 // sql 은 뷰/함수 정의(drizzle/custom SQL)에서 재사용
 export { sql };
+
+// ---------- 뷰 (drizzle/0001 에서 SQL 로 정의. 여기서는 읽기용 타입만 선언) ----------
+import { pgView } from "drizzle-orm/pg-core";
+
+export const vStock = pgView("v_stock", {
+  partId: bigint("part_id", { mode: "number" }).notNull(),
+  qty: integer("qty").notNull(),
+  openingQty: integer("opening_qty").notNull(),
+  inboundQty: integer("inbound_qty").notNull(),
+  soldQty: integer("sold_qty").notNull(),
+  adjustmentQty: integer("adjustment_qty").notNull(),
+}).existing();
+
+export const vInventory = pgView("v_inventory", {
+  id: bigint("id", { mode: "number" }).notNull(),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  categoryId: integer("category_id").notNull(),
+  categoryName: text("category_name").notNull(),
+  spec: text("spec"),
+  manufacturer: text("manufacturer"),
+  country: text("country"),
+  supplierId: integer("supplier_id"),
+  standardCost: numeric("standard_cost", { precision: 14, scale: 0, mode: "number" }).notNull(),
+  retailPrice: numeric("retail_price", { precision: 14, scale: 0, mode: "number" }).notNull(),
+  avgCost: numeric("avg_cost", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  safetyStock: integer("safety_stock").notNull(),
+  status: partStatus("status").notNull(),
+  qty: integer("qty").notNull(),
+  openingQty: integer("opening_qty").notNull(),
+  inboundQty: integer("inbound_qty").notNull(),
+  soldQty: integer("sold_qty").notNull(),
+  adjustmentQty: integer("adjustment_qty").notNull(),
+  stockStatus: text("stock_status").$type<"ok" | "low" | "out">().notNull(),
+  stockValue: numeric("stock_value", { precision: 16, scale: 0, mode: "number" }).notNull(),
+}).existing();
+
+export const vPartnerStats = pgView("v_partner_stats", {
+  partnerId: bigint("partner_id", { mode: "number" }).notNull(),
+  orderCount: integer("order_count").notNull(),
+  totalAmount: numeric("total_amount", { precision: 16, scale: 0, mode: "number" }).notNull(),
+  lastDate: date("last_date"),
+}).existing();
