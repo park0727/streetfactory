@@ -47,3 +47,6 @@ next-env.d.ts
 .dev.vars.*
 !.dev.vars.example
 cloudflare-env.d.ts
+
+# orca 세션 파일 (스크린샷 등)
+.orca/
