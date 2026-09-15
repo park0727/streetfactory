@@ -18,15 +18,19 @@ npm run typecheck    # tsc
 npm run lint
 npm run db:generate  # 스키마 변경 → drizzle/ 마이그레이션 생성
 npm run db:migrate   # DIRECT_URL(5432) 로 마이그레이션 적용
-npm run preview      # Workers 런타임으로 로컬 실행 (.dev.vars 필요)
 npm run create-admin -- <email> [이름]   # 첫 관리자 생성
-npm run deploy       # Cloudflare 배포 (wrangler login 필요)
+npm run deploy       # Cloudflare 배포 (wrangler login 필요). scripts/cf.mjs 가 Hyperdrive 로컬 변수를 채워 준다
+npm run preview      # Workers 런타임으로 로컬 실행
 ```
 
 ## 로컬 DB 검증
 로컬 Postgres 16 이 떠 있으면 `createdb streetfactory_test` 후 `auth.users` 스텁 테이블을 만들고
 `DIRECT_URL=postgresql://localhost:5432/streetfactory_test npx drizzle-kit migrate` 로 SQL 을 검증할 수 있다.
 인증은 Supabase 전용이라 화면 E2E 는 실제 Supabase 프로젝트가 필요하다.
+
+## 배포 환경 메모
+- 한국에서 workers.dev 로 접속하면 요청이 LAX(미국) PoP 로 들어오는 경우가 있다. Smart Placement(`placement.mode: smart`) 와 Hyperdrive 로 DB 왕복을 줄였다. 응답 1~1.5초 수준이면 정상.
+- Worker 번들은 gzip 약 4MB. 무료 플랜 한도 근처이므로 서버 번들에 큰 라이브러리를 추가하지 않는다 (exceljs·recharts 는 클라이언트 전용).
 
 ## 환경변수 (중요)
 - `.env.local` 에는 **NEXT_PUBLIC_ 공개값만** 둔다.
@@ -35,6 +39,9 @@ npm run deploy       # Cloudflare 배포 (wrangler login 필요)
 
 ## 반드시 지킬 규칙
 - **DB 풀 `max` 는 1 로 두지 않는다** (현재 5). 트랜잭션 풀러에 연결 1개로 동시 쿼리를 보내면 응답이 영구히 멈춘다. 페이지 하나에서 `Promise.all` 로 동시에 보내는 쿼리는 5개 이하.
+- **Workers 에서는 DB 클라이언트를 요청 간에 공유하지 않는다.** `src/db/index.ts` 가 프로덕션에서 React `cache()` 로 요청마다 새 클라이언트를 만든다. 전역 캐시로 되돌리면 "Failed query" 간헐 오류가 난다.
+- 프로덕션 DB 접속은 **Hyperdrive** 바인딩(`wrangler.jsonc`) 을 통한다. 원본은 Supabase 세션 풀러(5432). Hyperdrive 설정을 바꾸면 `wrangler hyperdrive update` 로.
+- 인증 확인은 `supabase.auth.getClaims()` (로컬 JWT 검증). `getUser()` 는 요청마다 Supabase 서버를 호출하므로 쓰지 않는다.
 - **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.
 - **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외).
 - 판매 라인 `unit_price`/`unit_cost` 는 스냅샷이다. 마스터 변경으로 소급 수정하지 않는다.
