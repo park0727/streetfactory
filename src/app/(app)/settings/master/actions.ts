@@ -21,12 +21,12 @@ const supplierSchema = z.object({
   country: z.string().trim().min(1, "국가를 입력하세요.").max(50),
   contact: z.string().trim().max(200).optional(),
   memo: z.string().trim().max(500).optional(),
-  isActive: z.coerce.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 function parse<T extends z.ZodTypeAny>(schema: T, fd: FormData): { data: z.infer<T> } | { error: string } {
   const raw: Record<string, unknown> = {};
-  fd.forEach((v, k) => (raw[k] = v === "" ? undefined : v));
+  fd.forEach((v, k) => (raw[k] = v === "" ? undefined : v === "true" ? true : v === "false" ? false : v));
   const r = schema.safeParse(raw);
   return r.success ? { data: r.data } : { error: firstIssue(r.error.issues) };
 }
@@ -83,6 +83,7 @@ export async function deleteChannel(id: number): Promise<ActionResult> {
 // ---------- 공급사 ----------
 export async function saveSupplier(_: unknown, fd: FormData): Promise<ActionResult> {
   await requireModule("parts");
+  fd.set("isActive", fd.get("isActive") === "true" ? "true" : "false"); // 체크 해제 시 값이 실리지 않는다
   const p = parse(supplierSchema, fd);
   if ("error" in p) return { ok: false, error: p.error };
   const { id, ...values } = p.data;

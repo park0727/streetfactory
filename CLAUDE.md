@@ -19,6 +19,7 @@ npm run lint
 npm run db:generate  # 스키마 변경 → drizzle/ 마이그레이션 생성
 npm run db:migrate   # DIRECT_URL(5432) 로 마이그레이션 적용
 npm run create-admin -- <email> [이름]   # 첫 관리자 생성
+node --env-file=.env.secrets --env-file=.env.local scripts/reset-data.mjs --yes   # 업무 데이터 전체 초기화 (사용자·채널 유지)
 npm run deploy       # Cloudflare 배포 (wrangler login 필요). scripts/cf.mjs 가 Hyperdrive 로컬 변수를 채워 준다
 npm run preview      # Workers 런타임으로 로컬 실행
 ```
@@ -71,6 +72,7 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 ## 패턴
 - 화면 = `page.tsx`(RSC, 조회) + `actions.ts`("use server", zod 검증, revalidatePath) + 클라이언트 표/폼 컴포넌트.
 - 폼은 `useActionState` + `useActionToast`. 삭제·비활성화는 `ConfirmButton` 에 바인딩된 액션을 넘긴다.
+- **체크박스는 해제 시 FormData 에 값이 실리지 않는다.** 서버에서 `fd.get("x") === "true"` 로 명시 판정하고 `z.boolean()` 을 쓴다. `z.coerce.boolean().default(true)` 는 해제 저장이 안 되는 버그를 만든다.
 - 참고 구현: `src/app/(app)/settings/master`(단순 CRUD), `src/app/(app)/parts`(검색·필터·엑셀), `src/app/(app)/entry`(복합 폼 + 서버 액션 JSON 입력).
 - 목록 필터는 URL 쿼리(`useUrlFilters`, `useDebouncedParam`) 로. 서버 페이지가 `searchParams` 를 읽어 쿼리한다.
 - 엑셀 다운로드 = `/<route>/export` 라우트 핸들러(JSON) + 클라이언트 `downloadXlsx`. 업로드 = 클라이언트 `readXlsx` → 서버 검증 액션 → 미리보기 → 저장 액션.

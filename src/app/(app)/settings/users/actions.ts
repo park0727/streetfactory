@@ -12,8 +12,8 @@ const PATH = "/settings/users";
 const BAN_FOREVER = "876600h"; // 100년
 const flags = {
   role: z.enum(["admin", "staff"]).default("staff"),
-  canParts: z.coerce.boolean().default(false),
-  canRepair: z.coerce.boolean().default(false),
+  canParts: z.boolean(),
+  canRepair: z.boolean(),
 };
 const createSchema = z.object({
   email: z.email("이메일 형식이 아닙니다.").trim(),
@@ -29,6 +29,9 @@ const updateSchema = z.object({
 function toObject(fd: FormData) {
   const raw: Record<string, unknown> = {};
   fd.forEach((v, k) => (raw[k] = v === "" ? undefined : v));
+  // 체크박스는 해제 시 값이 실리지 않으므로 명시적으로 판정
+  raw.canParts = fd.get("canParts") === "true";
+  raw.canRepair = fd.get("canRepair") === "true";
   return raw;
 }
 

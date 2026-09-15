@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { partners } from "@/db/schema";
+import { partners, salesOrders } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { dbErrorMessage, firstIssue, type ActionResult } from "@/lib/action-result";
 
@@ -16,13 +16,14 @@ const schema = z.object({
   email: z.string().trim().max(100).optional(),
   address: z.string().trim().max(200).optional(),
   memo: z.string().trim().max(500).optional(),
-  isActive: z.coerce.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 export async function savePartner(_: unknown, fd: FormData): Promise<ActionResult> {
   await requireModule("parts");
   const raw: Record<string, unknown> = {};
   fd.forEach((v, k) => (raw[k] = v === "" ? undefined : v));
+  raw.isActive = fd.get("isActive") === "true"; // 체크 해제 시 값이 실리지 않으므로 명시적으로 판정
   const r = schema.safeParse(raw);
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
   const { id, ...v } = r.data;
@@ -42,4 +43,15 @@ export async function savePartner(_: unknown, fd: FormData): Promise<ActionResul
   revalidatePath("/partners");
   revalidatePath("/entry");
   return { ok: true, message: "저장했습니다." };
+}
+
+/** 거래처 삭제. 출고 이력이 있으면 원장 무결성 때문에 삭제 대신 '거래 중지' 를 안내한다. */
+export async function deletePartner(id: number): Promise<ActionResult> {
+  await requireModule("parts");
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(salesOrders).where(eq(salesOrders.partnerId, id));
+  if (n > 0) return { ok: false, error: `출고 전표 ${n}건이 이 거래처에 연결되어 있어 삭제할 수 없습니다. 대신 수정에서 '거래 중' 을 해제하세요.` };
+  await db.delete(partners).where(eq(partners.id, id));
+  revalidatePath("/partners");
+  revalidatePath("/entry");
+  return { ok: true, message: "거래처를 삭제했습니다." };
 }

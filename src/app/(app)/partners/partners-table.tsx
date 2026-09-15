@@ -1,7 +1,7 @@
 "use client";
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { BookOpenText, Pencil, Plus } from "lucide-react";
+import { BookOpenText, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +15,8 @@ import { EmptyState } from "@/components/page-header";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { krw, num } from "@/lib/format";
 import { PARTNER_TYPE } from "@/lib/dates";
-import { savePartner } from "./actions";
+import { ConfirmButton } from "@/components/confirm-button";
+import { deletePartner, savePartner } from "./actions";
 
 export type PartnerRow = {
   id: number;
@@ -48,7 +49,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
             <TableHead className="th-label w-[90px] text-right">출고건수</TableHead>
             <TableHead className="th-label w-[130px] text-right">누적 거래금액</TableHead>
             <TableHead className="th-label w-[110px]">최근 거래일</TableHead>
-            <TableHead className="w-[84px]" />
+            <TableHead className="w-[112px]" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,6 +85,18 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
                 <Button variant="ghost" size="icon-sm" onClick={() => setEditing(r)} aria-label={`${r.name} 수정`} title="수정">
                   <Pencil />
                 </Button>
+                <ConfirmButton
+                  action={deletePartner.bind(null, r.id)}
+                  title={`'${r.name}' 삭제`}
+                  description={r.orderCount > 0 ? `출고 전표 ${r.orderCount}건이 연결되어 있어 삭제할 수 없습니다. 수정에서 '거래 중' 을 해제하면 목록에서 숨길 수 있습니다.` : "거래처를 지웁니다. 되돌릴 수 없습니다."}
+                  confirmLabel="삭제"
+                  destructive
+                  size="icon-sm"
+                  className="text-destructive"
+                  label="삭제"
+                >
+                  <Trash2 />
+                </ConfirmButton>
               </TableCell>
             </TableRow>
           ))}
