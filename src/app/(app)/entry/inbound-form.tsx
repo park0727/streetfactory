@@ -11,28 +11,43 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox } from "@/components/combobox";
 import { krw, num } from "@/lib/format";
 import { PartPicker } from "./part-picker";
-import { createInbound, type PartHit } from "./actions";
+import { createInbound, updateInbound, type PartHit } from "./actions";
 import { CURRENCIES, SHIPPING } from "./schema";
 
 type Line = { key: number; part: PartHit | null; qty: number; unitPriceFx: number };
-type Props = { suppliers: { id: number; name: string; country: string }[]; today: string };
+export type InboundInitial = {
+  orderId: number;
+  docNo: string;
+  docDate: string;
+  supplierId: number | null;
+  currency: string;
+  exchangeRate: number;
+  dutyAmount: number;
+  extraCost: number;
+  shippingMethod: string | null;
+  customsStatus: "pending" | "cleared";
+  memo: string | null;
+  lines: { part: PartHit; qty: number; unitPriceFx: number }[];
+};
+type Props = { suppliers: { id: number; name: string; country: string }[]; today: string; initial?: InboundInitial; onSaved?: (docNo: string) => void };
 let keySeq = 1;
 const newLine = (): Line => ({ key: keySeq++, part: null, qty: 1, unitPriceFx: 0 });
 
 const DEFAULT_CURRENCY: Record<string, string> = { 일본: "JPY", 미국: "USD", 영국: "GBP", 중국: "CNY", 독일: "EUR", 이탈리아: "EUR", 대만: "TWD", 태국: "THB" };
 
-export function InboundForm({ suppliers, today }: Props) {
+export function InboundForm({ suppliers, today, initial, onSaved }: Props) {
   const router = useRouter();
-  const [docDate, setDocDate] = useState(today);
-  const [supplierId, setSupplierId] = useState("");
-  const [currency, setCurrency] = useState("JPY");
-  const [rate, setRate] = useState<number>(0);
-  const [duty, setDuty] = useState(0);
-  const [extra, setExtra] = useState(0);
-  const [shipping, setShipping] = useState<string>(SHIPPING[0]);
-  const [customs, setCustoms] = useState<"pending" | "cleared">("cleared");
-  const [memo, setMemo] = useState("");
-  const [lines, setLines] = useState<Line[]>([newLine()]);
+  const editing = !!initial;
+  const [docDate, setDocDate] = useState(initial?.docDate ?? today);
+  const [supplierId, setSupplierId] = useState(initial?.supplierId ? String(initial.supplierId) : "");
+  const [currency, setCurrency] = useState(initial?.currency ?? "JPY");
+  const [rate, setRate] = useState<number>(initial?.exchangeRate ?? 0);
+  const [duty, setDuty] = useState(initial?.dutyAmount ?? 0);
+  const [extra, setExtra] = useState(initial?.extraCost ?? 0);
+  const [shipping, setShipping] = useState<string>(initial?.shippingMethod ?? SHIPPING[0]);
+  const [customs, setCustoms] = useState<"pending" | "cleared">(initial?.customsStatus ?? "cleared");
+  const [memo, setMemo] = useState(initial?.memo ?? "");
+  const [lines, setLines] = useState<Line[]>(initial ? initial.lines.map((l) => ({ ...newLine(), part: l.part, qty: l.qty, unitPriceFx: l.unitPriceFx })) : [newLine()]);
   const [pending, start] = useTransition();
 
   const supplier = suppliers.find((s) => String(s.id) === supplierId);
@@ -66,7 +81,7 @@ export function InboundForm({ suppliers, today }: Props) {
     if (!(rate > 0)) return toast.error("환율을 입력하세요. 원화 거래면 KRW 와 1 을 넣습니다.");
     if (valid.length === 0) return toast.error("부품을 한 개 이상 추가하세요.");
     start(async () => {
-      const r = await createInbound({
+      const input = {
         docDate,
         supplierId: Number(supplierId),
         country: supplier?.country,
@@ -78,12 +93,17 @@ export function InboundForm({ suppliers, today }: Props) {
         customsStatus: customs,
         memo: memo || undefined,
         lines: valid.map((l) => ({ partId: l.part!.id, qty: l.qty, unitPriceFx: l.unitPriceFx })),
-      });
+      };
+      const r = initial ? await updateInbound(initial.orderId, input) : await createInbound(input);
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
       toast.success(r.message);
+      if (initial) {
+        onSaved?.(r.data.docNo);
+        return;
+      }
       setLines([newLine()]);
       setDuty(0);
       setExtra(0);
@@ -224,7 +244,7 @@ export function InboundForm({ suppliers, today }: Props) {
 
       <div className="flex justify-end">
         <Button onClick={submit} disabled={pending} className="h-10 px-5">
-          {pending ? "확정 중…" : "입고 확정"}
+          {pending ? (editing ? "저장 중…" : "확정 중…") : editing ? "수정 저장 (재확정)" : "입고 확정"}
         </Button>
       </div>
     </div>

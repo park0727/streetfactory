@@ -10,6 +10,7 @@ import { PageHeader, Panel, EmptyState } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LedgerToolbar } from "../partners/toolbar";
+import { LedgerRowActions } from "../row-actions";
 
 export const metadata = { title: "판매 원장" };
 
@@ -90,12 +91,13 @@ export default async function SalesLedgerPage({ searchParams }: PageProps<"/ledg
               <TableHead className="th-label w-[110px] text-right">매출이익</TableHead>
               <TableHead className="th-label w-[70px] text-right">마진</TableHead>
               <TableHead className="th-label">메모</TableHead>
+              <TableHead className="w-[72px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="p-0">
+                <TableCell colSpan={11} className="p-0">
                   <EmptyState title="해당 기간에 전표가 없습니다" />
                 </TableCell>
               </TableRow>
@@ -116,6 +118,7 @@ export default async function SalesLedgerPage({ searchParams }: PageProps<"/ledg
                   <TableCell className={`tabular text-right ${Number(r.profit) < 0 ? "text-status-critical" : ""}`}>{krw(r.profit)}</TableCell>
                   <TableCell className="tabular text-right text-steel">{pct(m)}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-steel">{r.memo ?? ""}</TableCell>
+                  <TableCell className="text-right"><LedgerRowActions kind="sales" id={r.id} docNo={r.docNo} /></TableCell>
                 </TableRow>
               );
             })}

@@ -44,7 +44,9 @@ npm run preview      # Workers 런타임으로 로컬 실행
 - 프로덕션 DB 접속은 **Hyperdrive** 바인딩(`wrangler.jsonc`) 을 통한다. 원본은 Supabase 세션 풀러(5432). Hyperdrive 설정을 바꾸면 `wrangler hyperdrive update` 로.
 - 인증 확인은 `supabase.auth.getClaims()` (로컬 JWT 검증). `getUser()` 는 요청마다 Supabase 서버를 호출하므로 쓰지 않는다.
 - **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.
-- **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외).
+- **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외). 전표 수정 = 트랜잭션 안에서 unpost → 라인 교체 → post (전표번호 유지).
+- 수정·삭제 권한은 부품 모듈 사용자 전체 (소규모 팀). 사용자 관리만 admin 전용.
+- 저장·삭제 성공 시 `useActionToast` / `ConfirmButton` 이 `router.refresh()` 를 호출한다. 목록 갱신을 위해 별도 처리하지 않아도 된다.
 - 판매 라인 `unit_price`/`unit_cost` 는 스냅샷이다. 마스터 변경으로 소급 수정하지 않는다.
 - `parts.code` 는 수정 불가. 삭제 대신 `status = discontinued`.
 - 전표번호는 `fn_next_seq(prefix, year)` 로 채번. 앱에서 max+1 하지 않는다.

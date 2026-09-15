@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { InboundToolbar } from "./toolbar";
+import { LedgerRowActions } from "../row-actions";
 
 export const metadata = { title: "입고 원장" };
 
@@ -111,12 +112,13 @@ export default async function InboundLedgerPage({ searchParams }: PageProps<"/le
               <TableHead className="th-label w-[130px] text-right">총 입고비용</TableHead>
               <TableHead className="th-label w-[80px]">운송</TableHead>
               <TableHead className="th-label w-[90px]">통관</TableHead>
+              <TableHead className="w-[72px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="p-0">
+                <TableCell colSpan={13} className="p-0">
                   <EmptyState title="해당 기간에 입고 전표가 없습니다" />
                 </TableCell>
               </TableRow>
@@ -137,6 +139,7 @@ export default async function InboundLedgerPage({ searchParams }: PageProps<"/le
                 <TableCell className="tabular text-right font-medium">{krw(r.total)}</TableCell>
                 <TableCell className="text-steel">{r.shippingMethod ?? "—"}</TableCell>
                 <TableCell>{r.customsStatus === "cleared" ? <Badge variant="outline" className="border-status-ok/40 text-status-ok">통관 완료</Badge> : <Badge variant="outline" className="border-status-warn/40 text-status-warn">통관 대기</Badge>}</TableCell>
+                <TableCell className="text-right"><LedgerRowActions kind="inbound" id={r.id} docNo={r.docNo} /></TableCell>
               </TableRow>
             ))}
           </TableBody>

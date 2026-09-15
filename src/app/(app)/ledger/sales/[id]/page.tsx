@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { db } from "@/db";
 import { parts, partners, profiles, salesLines, salesOrders } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
@@ -9,13 +9,12 @@ import { krw, num, pct, withVat } from "@/lib/format";
 import { PageHeader, Panel } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ConfirmButton } from "@/components/confirm-button";
-import { deleteSale } from "../actions";
+import { LedgerRowActions } from "../../row-actions";
 
 export const metadata = { title: "판매 전표" };
 
 export default async function SaleDetailPage({ params }: PageProps<"/ledger/sales/[id]">) {
-  const me = await requireModule("parts");
+  await requireModule("parts");
   const { id } = await params;
   const orderId = Number(id);
   if (!Number.isInteger(orderId)) notFound();
@@ -63,20 +62,7 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
                 <ArrowLeft /> 목록
               </Link>
             </Button>
-            {me.role === "admin" && (
-              <ConfirmButton
-                action={deleteSale.bind(null, o.id)}
-                title={`${o.docNo} 삭제`}
-                description="전표와 라인을 지우고 차감했던 재고를 되돌립니다. 되돌릴 수 없습니다. 수정이 필요하면 삭제 후 다시 등록하세요."
-                confirmLabel="삭제"
-                destructive
-                variant="outline"
-                size="sm"
-                className="text-status-critical"
-              >
-                <Trash2 /> 전표 삭제
-              </ConfirmButton>
-            )}
+            <LedgerRowActions kind="sales" id={o.id} docNo={o.docNo} size="sm" withLabels />
           </>
         }
       />

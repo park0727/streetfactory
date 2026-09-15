@@ -11,23 +11,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox } from "@/components/combobox";
 import { krw, pct, num } from "@/lib/format";
 import { PartPicker, StockHint, } from "./part-picker";
-import { createSale, type PartHit } from "./actions";
+import { createSale, updateSale, type PartHit } from "./actions";
 
 type Line = { key: number; part: PartHit | null; qty: number; unitPrice: number };
-type Props = { partners: { id: number; name: string; type: string; code: string }[]; channels: string[]; isAdmin: boolean; today: string };
+export type SaleInitial = { orderId: number; docNo: string; docDate: string; partnerId: number; channel: string | null; memo: string | null; lines: { part: PartHit; qty: number; unitPrice: number }[] };
+type Props = {
+  partners: { id: number; name: string; type: string; code: string }[];
+  channels: string[];
+  isAdmin: boolean;
+  today: string;
+  /** 있으면 수정 모드 */
+  initial?: SaleInitial;
+  onSaved?: (docNo: string) => void;
+};
 
 const PARTNER_TYPE: Record<string, string> = { dealer: "대리점", service_center: "정비센터", direct_store: "직영", online_mall: "온라인", other: "기타" };
 let keySeq = 1;
 const newLine = (): Line => ({ key: keySeq++, part: null, qty: 1, unitPrice: 0 });
 
-export function SaleForm({ partners, channels, isAdmin, today }: Props) {
+export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved }: Props) {
   const router = useRouter();
-  const [docDate, setDocDate] = useState(today);
-  const [partnerId, setPartnerId] = useState("");
-  const [channel, setChannel] = useState(channels[0] ?? "");
-  const [memo, setMemo] = useState("");
+  const editing = !!initial;
+  const [docDate, setDocDate] = useState(initial?.docDate ?? today);
+  const [partnerId, setPartnerId] = useState(initial ? String(initial.partnerId) : "");
+  const [channel, setChannel] = useState(initial?.channel ?? channels[0] ?? "");
+  const [memo, setMemo] = useState(initial?.memo ?? "");
   const [allowNegative, setAllowNegative] = useState(false);
-  const [lines, setLines] = useState<Line[]>([newLine()]);
+  const [lines, setLines] = useState<Line[]>(initial ? initial.lines.map((l) => ({ ...newLine(), part: l.part, qty: l.qty, unitPrice: l.unitPrice })) : [newLine()]);
+  // 수정 모드: 이 전표가 이미 차감한 수량은 가용재고에 더해서 본다
+  const held = new Map<number, number>();
+  if (initial) for (const l of initial.lines) held.set(l.part.id, (held.get(l.part.id) ?? 0) + l.qty);
   const [pending, start] = useTransition();
 
   const totals = useMemo(() => {
@@ -41,7 +54,8 @@ export function SaleForm({ partners, channels, isAdmin, today }: Props) {
     const profit = amount - cost;
     return { amount, cost, qty, profit, margin: amount > 0 ? (profit / amount) * 100 : 0 };
   }, [lines]);
-  const anyShort = lines.some((l) => l.part && l.qty > l.part.qty);
+  const avail = (p: PartHit) => p.qty + (held.get(p.id) ?? 0);
+  const anyShort = lines.some((l) => l.part && l.qty > avail(l.part));
 
   function update(key: number, patch: Partial<Line>) {
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -55,19 +69,24 @@ export function SaleForm({ partners, channels, isAdmin, today }: Props) {
     if (!partnerId) return toast.error("거래처를 선택하세요.");
     if (valid.length === 0) return toast.error("부품을 한 개 이상 추가하세요.");
     start(async () => {
-      const r = await createSale({
+      const input = {
         docDate,
         partnerId: Number(partnerId),
         channel: channel || undefined,
         memo: memo || undefined,
         allowNegative,
         lines: valid.map((l) => ({ partId: l.part!.id, qty: l.qty, unitPrice: l.unitPrice })),
-      });
+      };
+      const r = initial ? await updateSale(initial.orderId, input) : await createSale(input);
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
       toast.success(r.message);
+      if (initial) {
+        onSaved?.(r.data.docNo);
+        return;
+      }
       setLines([newLine()]);
       setMemo("");
       setAllowNegative(false);
@@ -126,8 +145,8 @@ export function SaleForm({ partners, channels, isAdmin, today }: Props) {
         {lines.map((l, i) => (
           <div key={l.key} className="grid grid-cols-[1fr_auto] gap-2 rounded-md border bg-muted/30 p-2 sm:grid-cols-[minmax(0,1fr)_84px_120px_120px_36px] sm:items-start sm:border-0 sm:bg-transparent sm:p-0">
             <div className="col-span-2 min-w-0 space-y-1 sm:col-span-1">
-              <PartPicker id={`s-part-${i}`} value={l.part} onChange={(p) => setPart(l.key, p)} autoFocus={i === 0 && lines.length === 1} />
-              <StockHint p={l.part} qty={l.qty} />
+              <PartPicker id={`s-part-${i}`} value={l.part} onChange={(p) => setPart(l.key, p)} autoFocus={!editing && i === 0 && lines.length === 1} />
+              <StockHint p={l.part} qty={l.qty} extra={l.part ? (held.get(l.part.id) ?? 0) : 0} />
             </div>
             <div>
               <Label htmlFor={`s-qty-${i}`} className="text-[11px] text-steel sm:hidden">수량</Label>
@@ -179,7 +198,7 @@ export function SaleForm({ partners, channels, isAdmin, today }: Props) {
 
       <div className="flex justify-end">
         <Button onClick={submit} disabled={pending || (anyShort && !allowNegative)} className="h-10 px-5">
-          {pending ? "등록 중…" : "출고 등록"}
+          {pending ? (editing ? "저장 중…" : "등록 중…") : editing ? "수정 저장" : "출고 등록"}
         </Button>
       </div>
     </div>

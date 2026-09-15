@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,7 @@ type Props = {
 export function ConfirmButton({ action, title, description, confirmLabel = "확인", destructive, children, variant = "ghost", size = "sm", className, label }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const router = useRouter();
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
@@ -58,6 +60,7 @@ export function ConfirmButton({ action, title, description, confirmLabel = "확�
                 if (r.ok) {
                   toast.success(r.message ?? "완료되었습니다.");
                   setOpen(false);
+                  router.refresh(); // 목록이 바로 갱신되도록
                 } else toast.error(r.error);
               });
             }}

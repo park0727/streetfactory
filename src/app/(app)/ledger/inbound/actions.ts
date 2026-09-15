@@ -3,12 +3,12 @@ import { revalidatePath } from "next/cache";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { inboundOrders, parts } from "@/db/schema";
-import { requireAdmin, requireModule } from "@/lib/auth";
+import { requireModule } from "@/lib/auth";
 import type { ActionResult } from "@/lib/action-result";
 
-/** 입고 전표 삭제 (관리자). 재고이동을 되돌리고 평균원가를 재계산한 뒤 전표를 지운다. */
+/** 입고 전표 삭제. 재고이동을 되돌리고 평균원가를 재계산한 뒤 전표를 지운다. */
 export async function deleteInbound(id: number): Promise<ActionResult> {
-  await requireAdmin();
+  await requireModule("parts");
   const [o] = await db.select({ docNo: inboundOrders.docNo }).from(inboundOrders).where(eq(inboundOrders.id, id));
   if (!o) return { ok: false, error: "전표를 찾을 수 없습니다." };
   await db.transaction(async (tx) => {

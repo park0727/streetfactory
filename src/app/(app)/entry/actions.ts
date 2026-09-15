@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { and, asc, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { inboundLines, inboundOrders, parts, salesLines, salesOrders, vInventory } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/auth";
 import { firstIssue, type ActionResult } from "@/lib/action-result";
 import { saleSchema, inboundSchema, type SaleInput, type InboundInput } from "./schema";
@@ -55,25 +56,33 @@ async function nextDocNo(tx: Parameters<Parameters<typeof db.transaction>[0]>[0]
   return `${prefix}-${year}-${String(n).padStart(5, "0")}`;
 }
 
+/** 재고 검사. editingOrderId 가 있으면 그 전표가 이미 차감한 수량은 가용재고로 되돌려 계산한다. */
+async function checkStock(d: SaleInput, role: string, editingOrderId?: number): Promise<string | null> {
+  const need = new Map<number, number>();
+  for (const l of d.lines) need.set(l.partId, (need.get(l.partId) ?? 0) + l.qty);
+  const stocks = await db.select({ id: vInventory.id, code: vInventory.code, qty: vInventory.qty }).from(vInventory).where(inArray(vInventory.id, [...need.keys()]));
+  if (stocks.length !== need.size) return "존재하지 않는 부품이 포함되어 있습니다.";
+  const held = new Map<number, number>();
+  if (editingOrderId) {
+    const old = await db.select({ partId: salesLines.partId, qty: salesLines.qty }).from(salesLines).where(eq(salesLines.orderId, editingOrderId));
+    for (const o of old) held.set(o.partId, (held.get(o.partId) ?? 0) + o.qty);
+  }
+  const short = stocks.filter((s) => (need.get(s.id) ?? 0) > s.qty + (held.get(s.id) ?? 0));
+  if (short.length && !(role === "admin" && d.allowNegative)) {
+    const msg = short.map((s) => `${s.code} (가용 ${s.qty + (held.get(s.id) ?? 0)}, 출고 ${need.get(s.id)})`).join(", ");
+    return `재고가 부족합니다: ${msg}. ${role === "admin" ? "'재고 부족해도 출고' 를 켜면 진행할 수 있습니다." : "관리자만 재고 초과 출고를 할 수 있습니다."}`;
+  }
+  return null;
+}
+
 /** 판매/출고 등록 → 전표 + 라인 → fn_post_sale (원가 스냅샷, 재고 차감) */
 export async function createSale(input: SaleInput): Promise<ActionResult<{ docNo: string }>> {
   const me = await requireModule("parts");
   const r = saleSchema.safeParse(input);
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
   const d = r.data;
-
-  // 같은 부품이 여러 라인이면 합쳐서 재고 검사
-  const need = new Map<number, number>();
-  for (const l of d.lines) need.set(l.partId, (need.get(l.partId) ?? 0) + l.qty);
-  const stocks = await db.select({ id: vInventory.id, code: vInventory.code, qty: vInventory.qty, status: vInventory.status }).from(vInventory).where(inArray(vInventory.id, [...need.keys()]));
-  if (stocks.length !== need.size) return { ok: false, error: "존재하지 않는 부품이 포함되어 있습니다." };
-  const short = stocks.filter((s) => (need.get(s.id) ?? 0) > s.qty);
-  if (short.length) {
-    if (!(me.role === "admin" && d.allowNegative)) {
-      const msg = short.map((s) => `${s.code} (재고 ${s.qty}, 출고 ${need.get(s.id)})`).join(", ");
-      return { ok: false, error: `재고가 부족합니다: ${msg}. ${me.role === "admin" ? "'재고 부족해도 출고' 를 켜면 진행할 수 있습니다." : "관리자만 재고 초과 출고를 할 수 있습니다."}` };
-    }
-  }
+  const stockError = await checkStock(d, me.role);
+  if (stockError) return { ok: false, error: stockError };
 
   const docNo = await db.transaction(async (tx) => {
     const docNo = await nextDocNo(tx, "SLS", d.docDate);
@@ -93,6 +102,32 @@ export async function createSale(input: SaleInput): Promise<ActionResult<{ docNo
   revalidatePath("/partners");
   revalidatePath("/");
   return { ok: true, message: `${docNo} 출고를 등록했습니다.`, data: { docNo } };
+}
+
+/**
+ * 판매 전표 수정. 전표번호는 유지한다.
+ * 재고이동을 되돌리고(fn_unpost_sale) 라인을 갈아 끼운 뒤 다시 확정한다(fn_post_sale).
+ * 원가 스냅샷은 재확정 시점의 평균원가로 새로 잡힌다.
+ */
+export async function updateSale(orderId: number, input: SaleInput): Promise<ActionResult<{ docNo: string }>> {
+  const me = await requireModule("parts");
+  const r = saleSchema.safeParse(input);
+  if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
+  const d = r.data;
+  const [o] = await db.select({ id: salesOrders.id, docNo: salesOrders.docNo }).from(salesOrders).where(eq(salesOrders.id, orderId));
+  if (!o) return { ok: false, error: "전표를 찾을 수 없습니다." };
+  const stockError = await checkStock(d, me.role, orderId);
+  if (stockError) return { ok: false, error: stockError };
+
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select public.fn_unpost_sale(${orderId})`);
+    await tx.delete(salesLines).where(eq(salesLines.orderId, orderId));
+    await tx.update(salesOrders).set({ docDate: d.docDate, partnerId: d.partnerId, channel: d.channel ?? null, memo: d.memo ?? null }).where(eq(salesOrders.id, orderId));
+    await tx.insert(salesLines).values(d.lines.map((l, i) => ({ orderId, lineNo: i + 1, partId: l.partId, qty: l.qty, unitPrice: Math.round(l.unitPrice), unitCost: 0 })));
+    await tx.execute(sql`select public.fn_post_sale(${orderId})`);
+  });
+  for (const p of ["/entry", "/inventory", "/ledger/sales", `/ledger/sales/${orderId}`, "/ledger/partners", "/partners", "/"]) revalidatePath(p);
+  return { ok: true, message: `${o.docNo} 를 수정했습니다.`, data: { docNo: o.docNo } };
 }
 
 /** 수입/입고 등록 → 전표 + 라인 → fn_post_inbound (배분·실질원가·평균원가) */
@@ -138,7 +173,47 @@ export async function createInbound(input: InboundInput): Promise<ActionResult<{
   return { ok: true, message: `${docNo} 입고를 확정했습니다.`, data: { docNo } };
 }
 
-/** 최근 판매·입고 5건 (하단 피드) */
+/**
+ * 입고 전표 수정. 전표번호 유지. 되돌리기(fn_unpost_inbound, 평균원가 재계산) → 라인 교체 → 재확정.
+ * 이미 판매된 라인의 원가 스냅샷은 바뀌지 않는다.
+ */
+export async function updateInbound(orderId: number, input: InboundInput): Promise<ActionResult<{ docNo: string }>> {
+  await requireModule("parts");
+  const r = inboundSchema.safeParse(input);
+  if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
+  const d = r.data;
+  const [o] = await db.select({ id: inboundOrders.id, docNo: inboundOrders.docNo }).from(inboundOrders).where(eq(inboundOrders.id, orderId));
+  if (!o) return { ok: false, error: "전표를 찾을 수 없습니다." };
+  const ids = [...new Set(d.lines.map((l) => l.partId))];
+  const found = await db.select({ id: parts.id }).from(parts).where(inArray(parts.id, ids));
+  if (found.length !== ids.length) return { ok: false, error: "존재하지 않는 부품이 포함되어 있습니다." };
+
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select public.fn_unpost_inbound(${orderId})`);
+    await tx.delete(inboundLines).where(eq(inboundLines.orderId, orderId));
+    await tx
+      .update(inboundOrders)
+      .set({
+        docDate: d.docDate,
+        supplierId: d.supplierId,
+        country: d.country ?? null,
+        currency: d.currency,
+        exchangeRate: d.exchangeRate,
+        dutyAmount: Math.round(d.dutyAmount),
+        extraCost: Math.round(d.extraCost),
+        shippingMethod: d.shippingMethod ?? null,
+        customsStatus: d.customsStatus,
+        memo: d.memo ?? null,
+      })
+      .where(eq(inboundOrders.id, orderId));
+    await tx.insert(inboundLines).values(d.lines.map((l, i) => ({ orderId, lineNo: i + 1, partId: l.partId, qty: l.qty, unitPriceFx: l.unitPriceFx, unitPriceKrw: 0, allocatedCost: 0, landedUnitCost: 0 })));
+    await tx.execute(sql`select public.fn_post_inbound(${orderId})`);
+  });
+  for (const p of ["/entry", "/inventory", "/ledger/inbound", `/ledger/inbound/${orderId}`, "/parts", "/"]) revalidatePath(p);
+  return { ok: true, message: `${o.docNo} 를 수정했습니다.`, data: { docNo: o.docNo } };
+}
+
+/** 최근 판매·입고 5건 (하단 피드). 원장과 같은 기준: 전표일자 내림차순, 같은 날이면 나중 전표가 위. */
 export async function recentFeed() {
   const [sales, inbound] = await Promise.all([
     db
@@ -152,7 +227,7 @@ export async function recentFeed() {
         createdAt: salesOrders.createdAt,
       })
       .from(salesOrders)
-      .orderBy(sql`${salesOrders.createdAt} desc`)
+      .orderBy(sql`${salesOrders.docDate} desc, ${salesOrders.id} desc`)
       .limit(5),
     db
       .select({
@@ -165,7 +240,7 @@ export async function recentFeed() {
         createdAt: inboundOrders.createdAt,
       })
       .from(inboundOrders)
-      .orderBy(sql`${inboundOrders.createdAt} desc`)
+      .orderBy(sql`${inboundOrders.docDate} desc, ${inboundOrders.id} desc`)
       .limit(5),
   ]);
   const now = Date.now();

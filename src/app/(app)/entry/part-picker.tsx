@@ -103,14 +103,15 @@ export function PartPicker({ value, onChange, id, autoFocus, showPrice = "retail
   );
 }
 
-export function StockHint({ p, qty }: { p: PartHit | null; qty: number }) {
+export function StockHint({ p, qty, extra = 0 }: { p: PartHit | null; qty: number; extra?: number }) {
   if (!p) return null;
-  const over = qty > p.qty;
+  const avail = p.qty + extra;
+  const over = qty > avail;
   return (
     <div className="flex items-center gap-2 text-[12px]">
       <StockStatusBadge status={p.stockStatus} />
       <span className={cn("tabular", over ? "font-medium text-status-critical" : "text-steel")}>
-        가용 {num(p.qty)}개{over && ` · ${num(qty - p.qty)}개 부족`}
+        가용 {num(avail)}개{extra > 0 && ` (이 전표분 ${num(extra)} 포함)`}{over && ` · ${num(qty - avail)}개 부족`}
       </span>
     </div>
   );

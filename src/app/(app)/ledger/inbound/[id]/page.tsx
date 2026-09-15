@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { db } from "@/db";
 import { inboundLines, inboundOrders, parts, profiles, suppliers } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
@@ -9,13 +9,12 @@ import { krw, num } from "@/lib/format";
 import { PageHeader, Panel } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ConfirmButton } from "@/components/confirm-button";
-import { deleteInbound } from "../actions";
+import { LedgerRowActions } from "../../row-actions";
 
 export const metadata = { title: "입고 전표" };
 
 export default async function InboundDetailPage({ params }: PageProps<"/ledger/inbound/[id]">) {
-  const me = await requireModule("parts");
+  await requireModule("parts");
   const { id } = await params;
   const orderId = Number(id);
   if (!Number.isInteger(orderId)) notFound();
@@ -68,20 +67,7 @@ export default async function InboundDetailPage({ params }: PageProps<"/ledger/i
                 <ArrowLeft /> 목록
               </Link>
             </Button>
-            {me.role === "admin" && (
-              <ConfirmButton
-                action={deleteInbound.bind(null, o.id)}
-                title={`${o.docNo} 삭제`}
-                description="전표를 지우고 입고 수량을 되돌리며 해당 부품의 평균원가를 다시 계산합니다. 이미 판매된 라인의 원가 스냅샷은 바뀌지 않습니다."
-                confirmLabel="삭제"
-                destructive
-                variant="outline"
-                size="sm"
-                className="text-status-critical"
-              >
-                <Trash2 /> 전표 삭제
-              </ConfirmButton>
-            )}
+            <LedgerRowActions kind="inbound" id={o.id} docNo={o.docNo} size="sm" withLabels />
           </>
         }
       />
