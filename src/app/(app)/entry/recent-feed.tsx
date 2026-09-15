@@ -54,7 +54,7 @@ function FeedList({ title, href, rows, empty, now, amountLabel }: { now: number;
                 <span className="code min-w-0 truncate text-[12.5px] sm:w-[128px] sm:shrink-0">{r.docNo}</span>
                 <span className="tabular shrink-0 font-medium sm:order-5">{krw(r.amount)}</span>
                 <span className="min-w-0 truncate text-steel sm:flex-1 sm:text-foreground">
-                  <span className="tabular sm:mr-3 sm:inline-block sm:w-[84px] sm:text-steel">{r.date}</span>
+                  <span className="tabular mr-2 sm:mr-3 sm:inline-block sm:w-[84px] sm:text-steel">{r.date}</span>
                   {r.who}
                 </span>
                 <span className="shrink-0 text-right text-[11.5px] text-steel sm:order-6 sm:w-[56px]">{timeAgo(r.createdAt, now)}</span>

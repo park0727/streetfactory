@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { partners, salesChannels, suppliers } from "@/db/schema";
@@ -18,11 +19,14 @@ export default async function EntryPage() {
     recentFeed(),
   ]);
   const { now, today } = feed;
+  // 모바일 UA 면 처음부터 탭 레이아웃으로 그려 첫 화면 깜빡임을 없앤다
+  const ua = (await headers()).get("user-agent") ?? "";
+  const defaultWide = !/Mobi|Android|iPhone|iPad/i.test(ua);
 
   return (
     <>
       <PageHeader title="입출고 등록" description="출고는 재고를 차감하고 판매 원장에, 입고는 평균원가를 갱신하고 입고 원장에 기록됩니다." />
-      <EntryClient partners={ps} suppliers={ss} channels={cs.map((c) => c.name)} isAdmin={me.role === "admin"} today={today} />
+      <EntryClient partners={ps} suppliers={ss} channels={cs.map((c) => c.name)} isAdmin={me.role === "admin"} today={today} defaultWide={defaultWide} />
       <div className="mt-5">
         <RecentFeedPanel feed={feed} now={now} />
       </div>
