@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type React from "react";
 
 export function PageHeader({ title, description, actions, eyebrow }: { title: string; description?: string; actions?: ReactNode; eyebrow?: string }) {
   return (
@@ -14,8 +15,12 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: st
 }
 
 /** 표·폼을 감싸는 흰 패널. 그림자 없이 hairline 만. */
-export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-md border bg-card ${className}`}>{children}</div>;
+export function Panel({ children, className = "", ...rest }: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={`rounded-md border bg-card ${className}`} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 /** 비어 있는 상태 */
