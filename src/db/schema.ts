@@ -111,6 +111,7 @@ export const partners = pgTable("partners", {
   code: text("code").notNull().unique(), // P-0001
   name: text("name").notNull(),
   type: partnerType("type").notNull().default("dealer"),
+  bizNo: text("biz_no"), // 사업자등록번호 (세금계산서용), 숫자 10자리 저장
   contactName: text("contact_name"),
   phone: text("phone"),
   email: text("email"),

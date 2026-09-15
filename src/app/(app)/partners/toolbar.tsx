@@ -14,7 +14,7 @@ export function PartnersToolbar() {
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative w-full sm:w-72">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-steel" />
-        <Input id="pt-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="거래처명 · 코드 · 담당자" className="bg-card pl-8" aria-label="거래처 검색" />
+        <Input id="pt-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="거래처명 · 코드 · 담당자 · 사업자번호" className="bg-card pl-8" aria-label="거래처 검색" />
       </div>
       <Select value={get("type") || "all"} onValueChange={(v) => set({ type: v })}>
         <SelectTrigger className="w-[150px] bg-card" aria-label="거래처 유형">

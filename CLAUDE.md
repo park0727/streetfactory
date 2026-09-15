@@ -41,7 +41,7 @@ npm run preview      # Workers 런타임으로 로컬 실행
 ## 반드시 지킬 규칙
 - **DB 풀 `max` 는 1 로 두지 않는다** (현재 5). 트랜잭션 풀러에 연결 1개로 동시 쿼리를 보내면 응답이 영구히 멈춘다. 페이지 하나에서 `Promise.all` 로 동시에 보내는 쿼리는 5개 이하.
 - **Workers 에서는 DB 클라이언트를 요청 간에 공유하지 않는다.** `src/db/index.ts` 가 프로덕션에서 React `cache()` 로 요청마다 새 클라이언트를 만든다. 전역 캐시로 되돌리면 "Failed query" 간헐 오류가 난다.
-- 프로덕션 DB 접속은 **Hyperdrive** 바인딩(`wrangler.jsonc`) 을 통한다. 원본은 Supabase 세션 풀러(5432). Hyperdrive 설정을 바꾸면 `wrangler hyperdrive update` 로.
+- 프로덕션 DB 접속은 **Hyperdrive** 바인딩(`wrangler.jsonc`) 을 통한다. 원본은 Supabase 세션 풀러(5432). **쿼리 캐시는 꺼 둔다**(`--caching-disabled`). 켜면 저장 후 최대 60초 동안 목록이 옛 값을 보여준다.
 - 인증 확인은 `supabase.auth.getClaims()` (로컬 JWT 검증). `getUser()` 는 요청마다 Supabase 서버를 호출하므로 쓰지 않는다.
 - **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.
 - **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외). 전표 수정 = 트랜잭션 안에서 unpost → 라인 교체 → post (전표번호 유지).

@@ -13,3 +13,6 @@ export const withVat = (n: number) => Math.round(n * 1.1);
 
 export const VAT_RATE = 0.1;
 export { numFmt };
+
+/** 사업자등록번호 표시: 1234567890 → 123-45-67890 */
+export const bizNo = (v: string | null | undefined) => (v && v.length === 10 ? `${v.slice(0, 3)}-${v.slice(3, 5)}-${v.slice(5)}` : (v ?? ""));

@@ -11,6 +11,12 @@ const schema = z.object({
   id: z.coerce.number().int().optional(),
   name: z.string().trim().min(1, "거래처명을 입력하세요.").max(100),
   type: z.enum(["dealer", "service_center", "direct_store", "online_mall", "other"]).default("dealer"),
+  bizNo: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\D/g, ""))
+    .refine((v) => v === "" || v.length === 10, "사업자등록번호는 숫자 10자리입니다 (예: 123-45-67890).")
+    .optional(),
   contactName: z.string().trim().max(50).optional(),
   phone: z.string().trim().max(30).optional(),
   email: z.string().trim().max(100).optional(),
@@ -27,7 +33,7 @@ export async function savePartner(_: unknown, fd: FormData): Promise<ActionResul
   const r = schema.safeParse(raw);
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
   const { id, ...v } = r.data;
-  const values = { name: v.name, type: v.type, contactName: v.contactName ?? null, phone: v.phone ?? null, email: v.email ?? null, address: v.address ?? null, memo: v.memo ?? null, isActive: v.isActive };
+  const values = { name: v.name, type: v.type, bizNo: v.bizNo || null, contactName: v.contactName ?? null, phone: v.phone ?? null, email: v.email ?? null, address: v.address ?? null, memo: v.memo ?? null, isActive: v.isActive };
   try {
     if (id) await db.update(partners).set(values).where(eq(partners.id, id));
     else {

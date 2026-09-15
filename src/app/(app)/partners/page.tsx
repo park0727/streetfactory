@@ -16,7 +16,7 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
   const type = str(sp, "type");
   const inactive = str(sp, "inactive") === "1";
   const conds: SQL[] = [];
-  if (q) conds.push(or(ilike(partners.name, `%${q}%`), ilike(partners.code, `%${q}%`), ilike(partners.contactName, `%${q}%`))!);
+  if (q) conds.push(or(ilike(partners.name, `%${q}%`), ilike(partners.code, `%${q}%`), ilike(partners.contactName, `%${q}%`), ilike(partners.bizNo, `%${q.replace(/\D/g, "")}%`))!);
   if (["dealer", "service_center", "direct_store", "online_mall", "other"].includes(type)) conds.push(eq(partners.type, type as typeof partners.$inferSelect.type));
   if (!inactive) conds.push(eq(partners.isActive, true));
 
@@ -26,6 +26,7 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
       code: partners.code,
       name: partners.name,
       type: partners.type,
+      bizNo: partners.bizNo,
       contactName: partners.contactName,
       phone: partners.phone,
       email: partners.email,

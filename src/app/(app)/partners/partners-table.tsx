@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/page-header";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { krw, num } from "@/lib/format";
+import { bizNo, krw, num } from "@/lib/format";
 import { PARTNER_TYPE } from "@/lib/dates";
 import { ConfirmButton } from "@/components/confirm-button";
 import { deletePartner, savePartner } from "./actions";
@@ -23,6 +23,7 @@ export type PartnerRow = {
   code: string;
   name: string;
   type: "dealer" | "service_center" | "direct_store" | "online_mall" | "other";
+  bizNo: string | null;
   contactName: string | null;
   phone: string | null;
   email: string | null;
@@ -44,6 +45,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
             <TableHead className="th-label w-[90px]">코드</TableHead>
             <TableHead className="th-label">거래처명</TableHead>
             <TableHead className="th-label w-[110px]">유형</TableHead>
+            <TableHead className="th-label w-[120px]">사업자번호</TableHead>
             <TableHead className="th-label">담당자 / 연락처</TableHead>
             <TableHead className="th-label">소재지</TableHead>
             <TableHead className="th-label w-[90px] text-right">출고건수</TableHead>
@@ -55,7 +57,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="p-0">
+              <TableCell colSpan={10} className="p-0">
                 <EmptyState title="거래처가 없습니다" hint="오른쪽 위 '거래처 등록' 으로 추가하세요." />
               </TableCell>
             </TableRow>
@@ -68,6 +70,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
                 {!r.isActive && <Badge variant="secondary" className="ml-2">거래 중지</Badge>}
               </TableCell>
               <TableCell><Badge variant="outline">{PARTNER_TYPE[r.type]}</Badge></TableCell>
+              <TableCell className="tabular">{r.bizNo ? bizNo(r.bizNo) : <span className="text-steel">—</span>}</TableCell>
               <TableCell>
                 {r.contactName ?? "—"}
                 {r.phone && <span className="ml-1.5 text-steel">{r.phone}</span>}
@@ -137,6 +140,10 @@ function PartnerDialog({ open, onClose, row }: { open: boolean; onClose: () => v
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pt-bizno">사업자등록번호</Label>
+              <Input id="pt-bizno" name="bizNo" defaultValue={row?.bizNo ? bizNo(row.bizNo) : ""} placeholder="123-45-67890" inputMode="numeric" maxLength={12} className="tabular" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pt-contact">담당자</Label>
