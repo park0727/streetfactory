@@ -32,8 +32,8 @@ export function MonthlyChart({ data }: { data: { month: string; amount: number; 
         <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--steel)", fontSize: 11.5 }} tickFormatter={compact} width={52} />
         <Tooltip content={<Tip />} cursor={{ fill: "var(--muted)" }} />
         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: "var(--steel)" }} />
-        <Bar dataKey="amount" name="매출액" fill="var(--chart-1)" maxBarSize={24} radius={[4, 4, 0, 0]} />
-        <Line type="monotone" dataKey="profit" name="매출이익" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 4, fill: "var(--chart-2)", stroke: "var(--card)", strokeWidth: 2 }} activeDot={{ r: 5 }} />
+        <Bar dataKey="amount" name="매출액" fill="var(--chart-1)" maxBarSize={24} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+        <Line type="monotone" dataKey="profit" name="매출이익" stroke="var(--chart-2)" strokeWidth={2} dot={{ r: 4, fill: "var(--chart-2)", stroke: "var(--card)", strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={false} />
       </ComposedChart>
     </ResponsiveContainer>
   );
