@@ -7,6 +7,8 @@ import { InboundForm } from "./inbound-form";
 
 type Props = React.ComponentProps<typeof SaleForm> & {
   suppliers: React.ComponentProps<typeof InboundForm>["suppliers"];
+  /** 서버가 UA 로 추정한 초기 레이아웃 (모바일이면 false → 첫 화면부터 탭) */
+  defaultWide?: boolean;
 };
 
 /** PC(xl 이상): 좌 판매 / 우 입고 2단. 그 외: 탭 전환. 폼 id 중복을 막기 위해 한 레이아웃만 렌더한다. */
@@ -16,8 +18,9 @@ export function EntryClient({
   isAdmin,
   today,
   suppliers,
+  defaultWide = true,
 }: Props) {
-  const wide = useMediaQuery("(min-width: 1280px)");
+  const wide = useMediaQuery("(min-width: 1280px)", defaultWide);
   const sale = (
     <SaleForm
       partners={partners}
