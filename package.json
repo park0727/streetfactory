@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node --env-file=.env.secrets node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -14,7 +14,8 @@
     "db:studio": "drizzle-kit studio",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "create-admin": "node --env-file=.env.secrets --env-file=.env.local scripts/create-admin.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

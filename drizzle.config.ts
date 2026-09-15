@@ -1,7 +1,8 @@
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-// .env.local 을 우선 읽고, 없으면 .env
+// 비밀값은 .env.secrets, 공개값은 .env.local
+config({ path: ".env.secrets" });
 config({ path: ".env.local" });
 config();
 

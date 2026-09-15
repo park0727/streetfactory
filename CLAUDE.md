@@ -13,20 +13,25 @@ Supabase(Postgres + Auth, 서울), Cloudflare Workers(OpenNext). 패키지 매�
 
 ## 명령
 ```
-npm run dev          # 로컬 개발 (.env.local 필요)
+npm run dev          # 로컬 개발 (.env.local + .env.secrets 필요)
 npm run typecheck    # tsc
 npm run lint
 npm run db:generate  # 스키마 변경 → drizzle/ 마이그레이션 생성
 npm run db:migrate   # DIRECT_URL(5432) 로 마이그레이션 적용
 npm run preview      # Workers 런타임으로 로컬 실행 (.dev.vars 필요)
-npm run deploy       # Cloudflare 배포
-node --env-file=.env.local scripts/create-admin.mjs <email> [이름]   # 첫 관리자 생성
+npm run create-admin -- <email> [이름]   # 첫 관리자 생성
+npm run deploy       # Cloudflare 배포 (wrangler login 필요)
 ```
 
 ## 로컬 DB 검증
 로컬 Postgres 16 이 떠 있으면 `createdb streetfactory_test` 후 `auth.users` 스텁 테이블을 만들고
 `DIRECT_URL=postgresql://localhost:5432/streetfactory_test npx drizzle-kit migrate` 로 SQL 을 검증할 수 있다.
 인증은 Supabase 전용이라 화면 E2E 는 실제 Supabase 프로젝트가 필요하다.
+
+## 환경변수 (중요)
+- `.env.local` 에는 **NEXT_PUBLIC_ 공개값만** 둔다.
+- 비밀값(DATABASE_URL, DIRECT_URL, SUPABASE_SECRET_KEY) 은 `.env.secrets` 에만 둔다. OpenNext 는 `.env`, `.env.local`, `.env.{production,development,test}(.local)` 을 **전부** 번들에 넣으므로 이 이름들에 비밀값을 두면 안 된다. `npm run dev` 가 `--env-file=.env.secrets` 로 읽는다.
+- 프로덕션 비밀값은 `wrangler secret put` 으로 등록한다. `src/proxy.ts` 와 `src/lib/env.ts` 에서는 비밀값을 참조하지 않는다 (미들웨어는 빌드 시 인라인됨).
 
 ## 반드시 지킬 규칙
 - **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.

@@ -1,6 +1,6 @@
 /**
  * 첫 관리자 계정 생성.
- *   node --env-file=.env.local scripts/create-admin.mjs admin@example.com "홍길동"
+ *   npm run create-admin -- admin@example.com "홍길동"
  * 임시 비밀번호를 출력한다. 첫 로그인 후 변경해야 한다.
  */
 import { createClient } from "@supabase/supabase-js";
@@ -8,13 +8,13 @@ import postgres from "postgres";
 
 const [email, name = "관리자"] = process.argv.slice(2);
 if (!email) {
-  console.error("사용법: node --env-file=.env.local scripts/create-admin.mjs <email> [이름]");
+  console.error("사용법: npm run create-admin -- <email> [이름]");
   process.exit(1);
 }
 const { NEXT_PUBLIC_SUPABASE_URL: url, DATABASE_URL } = process.env;
 const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key || !DATABASE_URL) {
-  console.error(".env.local 에 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, DATABASE_URL 이 필요합니다.");
+  console.error(".env.local(NEXT_PUBLIC_SUPABASE_URL) 과 .env.secrets(SUPABASE_SECRET_KEY, DATABASE_URL) 이 필요합니다.");
   process.exit(1);
 }
 
