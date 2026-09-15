@@ -43,12 +43,12 @@ export function PartPicker({ value, onChange, id, autoFocus, showPrice = "retail
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} autoFocus={autoFocus} className={cn("h-9 w-full justify-between bg-card px-2.5 font-normal", !value && "text-steel")}>
+        <Button id={id} type="button" variant="outline" role="combobox" aria-expanded={open} autoFocus={autoFocus} className={cn("h-9 w-full min-w-0 justify-between overflow-hidden bg-card px-2.5 font-normal", !value && "text-steel")}>
           {value ? (
-            <span className="flex min-w-0 items-center gap-2">
+            <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
               <span className="code shrink-0">{value.code}</span>
-              <span className="truncate">{value.name}</span>
-              {value.spec && <span className="hidden truncate text-[12px] text-steel sm:inline">{value.spec}</span>}
+              <span className="min-w-0 truncate">{value.name}</span>
+              {value.spec && <span className="hidden min-w-0 truncate text-[12px] text-steel lg:inline">{value.spec}</span>}
             </span>
           ) : (
             <span className="flex items-center gap-2">

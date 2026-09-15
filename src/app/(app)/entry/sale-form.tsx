@@ -110,7 +110,7 @@ export function SaleForm({ partners, channels, isAdmin, today }: Props) {
       </div>
 
       <div className="space-y-2">
-        <div className="hidden grid-cols-[1fr_84px_120px_120px_36px] gap-2 px-0.5 sm:grid">
+        <div className="hidden grid-cols-[minmax(0,1fr)_84px_120px_120px_36px] gap-2 px-0.5 sm:grid">
           <span className="th-label">부품</span>
           <span className="th-label text-right">수량</span>
           <span className="th-label text-right">단가 (₩)</span>
@@ -118,8 +118,8 @@ export function SaleForm({ partners, channels, isAdmin, today }: Props) {
           <span />
         </div>
         {lines.map((l, i) => (
-          <div key={l.key} className="grid grid-cols-[1fr_auto] gap-2 rounded-md border bg-muted/30 p-2 sm:grid-cols-[1fr_84px_120px_120px_36px] sm:items-start sm:border-0 sm:bg-transparent sm:p-0">
-            <div className="col-span-2 space-y-1 sm:col-span-1">
+          <div key={l.key} className="grid grid-cols-[1fr_auto] gap-2 rounded-md border bg-muted/30 p-2 sm:grid-cols-[minmax(0,1fr)_84px_120px_120px_36px] sm:items-start sm:border-0 sm:bg-transparent sm:p-0">
+            <div className="col-span-2 min-w-0 space-y-1 sm:col-span-1">
               <PartPicker id={`s-part-${i}`} value={l.part} onChange={(p) => setPart(l.key, p)} autoFocus={i === 0 && lines.length === 1} />
               <StockHint p={l.part} qty={l.qty} />
             </div>
