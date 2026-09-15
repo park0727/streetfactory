@@ -24,9 +24,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims 는 JWT 서명을 로컬(JWKS 캐시)에서 검증한다. 요청마다 Supabase 인증 서버를 호출하지 않는다.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims ? { id: data.claims.sub } : null;
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));

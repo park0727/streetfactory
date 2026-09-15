@@ -1,33 +1,45 @@
 import { cache } from "react";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import * as schema from "./schema";
 
 /**
- * Supabase Supavisor(트랜잭션 풀러, 6543) 용 postgres.js 클라이언트.
- * - prepare: false — 트랜잭션 풀러는 prepared statement 를 지원하지 않는다.
- * - max: 5 — **1 로 두면 안 된다.** 연결 1개에 쿼리를 파이프라이닝하면 풀러가 응답을 멈춘다.
- *   5 는 Workers 의 동시 소켓 한도(6) 안이다. 페이지 하나의 Promise.all 은 5개 이하로.
- *
- * 인스턴스 수명:
- * - 개발(Node): 전역 1개. HMR 로 연결이 늘어나는 것을 막는다.
- * - 프로덕션(Cloudflare Workers): **요청마다 새 클라이언트**. Workers 는 다른 요청이 만든 소켓을 쓸 수 없으므로
- *   전역 캐시를 쓰면 "Failed query" 로 간헐 실패한다. React cache() 로 같은 요청 안에서는 재사용한다.
+ * postgres.js 클라이언트.
+ * - 프로덕션(Cloudflare Workers): Hyperdrive 바인딩의 connectionString 을 쓴다. Hyperdrive 가 DB(서울) 근처에서
+ *   연결 풀을 유지하므로 Worker 가 먼 PoP 에서 실행돼도 접속 왕복이 크게 줄어든다.
+ *   Workers 는 다른 요청이 만든 소켓을 쓸 수 없으므로 **요청마다 새 클라이언트**를 만들고, React cache() 로 같은 요청 안에서만 재사용한다.
+ * - 개발(Node): DATABASE_URL 로 전역 1개. HMR 로 연결이 늘어나는 것을 막는다.
+ * - prepare: false — Supavisor 트랜잭션 풀러 호환. max: 5 — 1 로 두면 파이프라이닝으로 응답이 멈춘다 (Workers 소켓 한도 6 안).
+ * - fetch_types: false — 접속마다 타입 조회 왕복을 없앤다 (배열 타입 컬럼을 쓰지 않는다).
  */
-function createDb() {
-  const url = process.env.DATABASE_URL ?? "postgres://missing:missing@localhost:1/missing";
-  const client = postgres(url, { prepare: false, max: 5, idle_timeout: 20, connect_timeout: 10 });
+function createDb(url: string) {
+  const client = postgres(url, { prepare: false, max: 5, idle_timeout: 20, connect_timeout: 10, fetch_types: false });
   return drizzle(client, { schema });
 }
 
 export type Db = ReturnType<typeof createDb>;
 
+const FALLBACK = "postgres://missing:missing@localhost:1/missing";
+
+function connectionString(): string {
+  if (process.env.NODE_ENV === "production") {
+    try {
+      const env = getCloudflareContext().env as { HYPERDRIVE?: { connectionString: string } };
+      if (env.HYPERDRIVE?.connectionString) return env.HYPERDRIVE.connectionString;
+    } catch {
+      // Cloudflare 컨텍스트 밖(빌드 등)이면 DATABASE_URL 로
+    }
+  }
+  return process.env.DATABASE_URL ?? FALLBACK;
+}
+
 const globalForDb = globalThis as unknown as { __db?: Db };
-const perRequest = cache(() => createDb());
+const perRequest = cache(() => createDb(connectionString()));
 
 function current(): Db {
   if (process.env.NODE_ENV !== "production") {
-    if (!globalForDb.__db) globalForDb.__db = createDb();
+    if (!globalForDb.__db) globalForDb.__db = createDb(connectionString());
     return globalForDb.__db;
   }
   return perRequest();

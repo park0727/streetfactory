@@ -9,11 +9,10 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 /** 현재 로그인 사용자의 profile. 없으면 null. 요청 단위로 캐시된다. */
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const [profile] = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (!userId) return null;
+  const [profile] = await db.select().from(profiles).where(eq(profiles.id, userId)).limit(1);
   return profile ?? null;
 });
 

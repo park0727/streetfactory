@@ -11,7 +11,11 @@
   "services": [
     { "binding": "WORKER_SELF_REFERENCE", "service": "streetfactory" }
   ],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // DB(서울) 근처에서 Worker 를 실행하도록 배치 (요청이 먼 PoP 로 들어와도 DB 왕복이 짧아진다)
+  "placement": { "mode": "smart" },
+  // Supabase 세션 풀러(5432) 를 원본으로 하는 Hyperdrive. 연결 풀을 DB 근처에 유지한다.
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "a1ea4317cb5a4167a931bbdb151a289e" }]
   // 비밀값(DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY 등)은 `wrangler secret put` 으로 등록.
   // 공개값(NEXT_PUBLIC_*)은 빌드 시 .env 에서 인라인됨.
 }
