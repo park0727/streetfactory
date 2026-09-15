@@ -12,10 +12,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "node scripts/cf.mjs preview",
+    "deploy": "node scripts/cf.mjs deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "create-admin": "node --env-file=.env.secrets --env-file=.env.local scripts/create-admin.mjs"
+    "create-admin": "node --env-file=.env.secrets --env-file=.env.local scripts/create-admin.mjs",
+    "cf:build": "node scripts/cf.mjs build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

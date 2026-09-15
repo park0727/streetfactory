@@ -14,6 +14,8 @@ if (existsSync(".env.secrets")) {
   console.warn("[dev] .env.secrets 가 없습니다. DB/비밀 키 없이 실행합니다.");
 }
 if (/localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL ?? "")) console.log("[dev] 로컬 DB 사용:", process.env.DATABASE_URL);
+// wrangler 의 Hyperdrive 로컬 에뮬레이션용 (개발 코드는 DATABASE_URL 을 직접 쓰므로 값만 채워두면 된다)
+process.env.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE ??= process.env.DATABASE_URL ?? "";
 
 const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", ...process.argv.slice(2)], {
   stdio: "inherit",
