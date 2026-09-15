@@ -15,14 +15,19 @@ const flags = {
   canParts: z.boolean(),
   canRepair: z.boolean(),
 };
+const passwordField = z.string().min(8, "비밀번호는 8자 이상이어야 합니다.").max(72).optional();
 const createSchema = z.object({
   email: z.email("이메일 형식이 아닙니다.").trim(),
   name: z.string().trim().min(1, "이름을 입력하세요.").max(50),
+  password: passwordField, // 비우면 임시 비밀번호 자동 발급
+  mustChange: z.boolean(),
   ...flags,
 });
 const updateSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1, "이름을 입력하세요.").max(50),
+  password: passwordField, // 입력 시에만 변경
+  mustChange: z.boolean(),
   ...flags,
 });
 
@@ -32,6 +37,7 @@ function toObject(fd: FormData) {
   // 체크박스는 해제 시 값이 실리지 않으므로 명시적으로 판정
   raw.canParts = fd.get("canParts") === "true";
   raw.canRepair = fd.get("canRepair") === "true";
+  raw.mustChange = fd.get("mustChange") === "true";
   return raw;
 }
 
@@ -50,13 +56,14 @@ async function adminCount(exceptId?: string) {
   return n;
 }
 
-export async function createUser(_: unknown, fd: FormData): Promise<ActionResult<{ email: string; password: string }>> {
+export async function createUser(_: unknown, fd: FormData): Promise<ActionResult<{ email: string; password: string | null }>> {
   await requireAdmin();
   const r = createSchema.safeParse(toObject(fd));
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
-  const { email, name, role, canParts, canRepair } = r.data;
+  const { email, name, role, canParts, canRepair, mustChange } = r.data;
 
-  const password = tempPassword();
+  const manual = !!r.data.password;
+  const password = r.data.password ?? tempPassword();
   const sb = createSupabaseAdmin();
   const { data, error } = await sb.auth.admin.createUser({
     email,
@@ -72,28 +79,37 @@ export async function createUser(_: unknown, fd: FormData): Promise<ActionResult
   // auth.users 트리거가 profiles 행을 만든다. 역할·플래그만 덮어쓴다.
   await db
     .insert(profiles)
-    .values({ id: data.user.id, email, name, role, canParts, canRepair, mustChangePassword: true })
+    .values({ id: data.user.id, email, name, role, canParts, canRepair, mustChangePassword: mustChange })
     .onConflictDoUpdate({
       target: profiles.id,
-      set: { name, role, canParts, canRepair, mustChangePassword: true, isActive: true },
+      set: { name, role, canParts, canRepair, mustChangePassword: mustChange, isActive: true },
     });
 
   revalidatePath(PATH);
-  return { ok: true, message: "계정을 만들었습니다.", data: { email, password } };
+  // 직접 입력한 비밀번호는 관리자가 이미 알고 있으므로 다시 보여주지 않는다
+  return { ok: true, message: "계정을 만들었습니다.", data: { email, password: manual ? null : password } };
 }
 
 export async function updateUser(_: unknown, fd: FormData): Promise<ActionResult> {
   const me = await requireAdmin();
   const r = updateSchema.safeParse(toObject(fd));
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
-  const { id, name, role, canParts, canRepair } = r.data;
+  const { id, name, role, canParts, canRepair, password, mustChange } = r.data;
 
   if (id === me.id && role !== "admin") return { ok: false, error: "자기 자신의 관리자 권한은 해제할 수 없습니다." };
   if (role !== "admin" && (await adminCount(id)) === 0) return { ok: false, error: "관리자가 최소 1명은 있어야 합니다." };
 
-  await db.update(profiles).set({ name, role, canParts, canRepair }).where(eq(profiles.id, id));
+  if (password) {
+    const sb = createSupabaseAdmin();
+    const { error } = await sb.auth.admin.updateUserById(id, { password });
+    if (error) return { ok: false, error: `비밀번호 변경 실패: ${error.message}` };
+  }
+  await db
+    .update(profiles)
+    .set({ name, role, canParts, canRepair, ...(password ? { mustChangePassword: mustChange } : {}) })
+    .where(eq(profiles.id, id));
   revalidatePath(PATH);
-  return { ok: true, message: "저장했습니다." };
+  return { ok: true, message: password ? "저장했습니다. 비밀번호도 바꿨습니다." : "저장했습니다." };
 }
 
 export async function setUserActive(id: string, active: boolean): Promise<ActionResult> {

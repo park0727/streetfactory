@@ -37,7 +37,7 @@ export function UserTable({ rows, meId }: { rows: UserRow[]; meId: string }) {
   const [updateState, updateAction, updating] = useActionState(updateUser, undefined);
   useActionToast(createState, (s) => {
     setEditing(null);
-    setIssued({ ...s.data, title: "계정이 만들어졌습니다" });
+    if (s.data.password) setIssued({ email: s.data.email, password: s.data.password, title: "계정이 만들어졌습니다" });
   });
   useActionToast(updateState, () => setEditing(null));
 
@@ -146,7 +146,7 @@ export function UserTable({ rows, meId }: { rows: UserRow[]; meId: string }) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{row ? "사용자 수정" : "사용자 추가"}</DialogTitle>
-            {!row && <DialogDescription>임시 비밀번호가 자동 발급됩니다. 생성 후 화면에 한 번만 표시되니 직원에게 전달하세요.</DialogDescription>}
+            {!row && <DialogDescription>비밀번호를 비우면 임시 비밀번호가 자동 발급되어 한 번만 표시됩니다. 직접 정하면 그 비밀번호로 바로 로그인할 수 있습니다.</DialogDescription>}
           </DialogHeader>
           <form action={row ? updateAction : createAction} className="space-y-4" key={row?.id ?? "new"}>
             {row && <input type="hidden" name="id" value={row.id} />}
@@ -158,6 +158,13 @@ export function UserTable({ rows, meId }: { rows: UserRow[]; meId: string }) {
               <div className="space-y-2">
                 <Label htmlFor="u-email">이메일</Label>
                 <Input id="u-email" name="email" type="email" defaultValue={row?.email ?? ""} required disabled={!!row} />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="u-password">{row ? "새 비밀번호 (바꿀 때만 입력)" : "비밀번호 (비우면 임시 발급)"}</Label>
+                <Input id="u-password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={72} placeholder="8자 이상" />
+                <label className="flex items-center gap-2 text-[13px] text-steel">
+                  <Checkbox name="mustChange" value="true" defaultChecked={!row} /> 다음 로그인 때 본인이 비밀번호를 바꾸도록 요구
+                </label>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="u-role">역할</Label>

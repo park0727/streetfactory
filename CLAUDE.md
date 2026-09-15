@@ -43,6 +43,8 @@ npm run preview      # Workers 런타임으로 로컬 실행
 - **Workers 에서는 DB 클라이언트를 요청 간에 공유하지 않는다.** `src/db/index.ts` 가 프로덕션에서 React `cache()` 로 요청마다 새 클라이언트를 만든다. 전역 캐시로 되돌리면 "Failed query" 간헐 오류가 난다.
 - 프로덕션 DB 접속은 **Hyperdrive** 바인딩(`wrangler.jsonc`) 을 통한다. 원본은 Supabase 세션 풀러(5432). **쿼리 캐시는 꺼 둔다**(`--caching-disabled`). 켜면 저장 후 최대 60초 동안 목록이 옛 값을 보여준다.
 - 인증 확인은 `supabase.auth.getClaims()` (로컬 JWT 검증). `getUser()` 는 요청마다 Supabase 서버를 호출하므로 쓰지 않는다.
+- 비밀번호 변경·발급은 모두 서비스 키의 `auth.admin.updateUserById` 로 한다. 서버 액션에서 세션 쿠키 기반 `updateUser` 는 "Auth session missing" 이 날 수 있어 쓰지 않는다.
+- 로그인 액션이 임시 비밀번호 상태를 확인해 바로 `/settings/profile` 로 보낸다. `src/app/loading.tsx` 가 레이아웃 준비 중 빈 화면을 막는다.
 - **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.
 - **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외). 전표 수정 = 트랜잭션 안에서 unpost → 라인 교체 → post (전표번호 유지).
 - 수정·삭제 권한은 부품 모듈 사용자 전체 (소규모 팀). 사용자 관리만 admin 전용.
