@@ -9,14 +9,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/combobox";
-import { krw, pct, num } from "@/lib/format";
+import { krw, pct, num, withVat } from "@/lib/format";
+import { PAYMENT_METHOD, PAYMENT_TERMS, type PaymentMethod, type PaymentTerms } from "@/lib/payments-shared";
 import { PartPicker, StockHint, } from "./part-picker";
 import { createSale, updateSale, type PartHit } from "./actions";
 
 type Line = { key: number; part: PartHit | null; qty: number; unitPrice: number };
-export type SaleInitial = { orderId: number; docNo: string; docDate: string; partnerId: number; channel: string | null; memo: string | null; lines: { part: PartHit; qty: number; unitPrice: number }[] };
+export type SaleInitial = {
+  orderId: number;
+  docNo: string;
+  docDate: string;
+  partnerId: number;
+  channel: string | null;
+  memo: string | null;
+  vatApplied: boolean;
+  taxInvoiceIssued: boolean;
+  dueDate: string | null;
+  paid: number; // 이미 수금된 금액 (수정 시 하한)
+  lines: { part: PartHit; qty: number; unitPrice: number }[];
+};
+export type PartnerOpt = { id: number; name: string; type: string; code: string; defaultTerms: PaymentTerms; defaultVat: boolean };
 type Props = {
-  partners: { id: number; name: string; type: string; code: string }[];
+  partners: PartnerOpt[];
   channels: string[];
   isAdmin: boolean;
   today: string;
@@ -37,6 +51,12 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
   const [channel, setChannel] = useState(initial?.channel ?? channels[0] ?? "");
   const [memo, setMemo] = useState(initial?.memo ?? "");
   const [allowNegative, setAllowNegative] = useState(false);
+  // 결제: 거래처 기본값으로 자동 선택 (수정 모드에서는 전표 값)
+  const [terms, setTerms] = useState<PaymentTerms>(initial ? (initial.paid > 0 && initial.dueDate == null ? "immediate" : initial.dueDate ? "credit" : initial.paid > 0 ? "immediate" : "credit") : "immediate");
+  const [method, setMethod] = useState<PaymentMethod>("transfer");
+  const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
+  const [vatApplied, setVatApplied] = useState(initial?.vatApplied ?? true);
+  const [taxInvoice, setTaxInvoice] = useState(initial?.taxInvoiceIssued ?? false);
   const [lines, setLines] = useState<Line[]>(initial ? initial.lines.map((l) => ({ ...newLine(), part: l.part, qty: l.qty, unitPrice: l.unitPrice })) : [newLine()]);
   // 수정 모드: 이 전표가 이미 차감한 수량은 가용재고에 더해서 본다
   const held = new Map<number, number>();
@@ -57,6 +77,17 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
   const avail = (p: PartHit) => p.qty + (held.get(p.id) ?? 0);
   const anyShort = lines.some((l) => l.part && l.qty > avail(l.part));
 
+  function pickPartner(v: string) {
+    setPartnerId(v);
+    if (editing) return;
+    const p = partners.find((x) => String(x.id) === v);
+    if (p) {
+      setTerms(p.defaultTerms);
+      setVatApplied(p.defaultVat);
+    }
+  }
+  const receivable = vatApplied ? withVat(totals.amount) : totals.amount;
+
   function update(key: number, patch: Partial<Line>) {
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
@@ -75,6 +106,11 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
         channel: channel || undefined,
         memo: memo || undefined,
         allowNegative,
+        terms,
+        method,
+        dueDate: terms === "credit" && dueDate ? dueDate : undefined,
+        vatApplied,
+        taxInvoiceIssued: taxInvoice,
         lines: valid.map((l) => ({ partId: l.part!.id, qty: l.qty, unitPrice: l.unitPrice })),
       };
       const r = initial ? await updateSale(initial.orderId, input) : await createSale(input);
@@ -111,7 +147,7 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
           <Combobox
             id="s-partner"
             value={partnerId}
-            onChange={setPartnerId}
+            onChange={pickPartner}
             placeholder="거래처 선택"
             searchPlaceholder="거래처명 · 코드 검색"
             options={partners.map((p) => ({ value: String(p.id), label: p.name, hint: PARTNER_TYPE[p.type] ?? p.type, keywords: p.code }))}
@@ -165,6 +201,62 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
         <Button type="button" variant="outline" size="sm" onClick={() => setLines((ls) => [...ls, newLine()])}>
           <Plus /> 부품 추가
         </Button>
+      </div>
+
+      <div className="rounded-md border px-4 py-3">
+        <p className="th-label mb-2">결제</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="s-terms">결제 구분</Label>
+            <Select value={terms} onValueChange={(v) => setTerms(v as PaymentTerms)} disabled={editing}>
+              <SelectTrigger id="s-terms" className="h-9 w-full bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PAYMENT_TERMS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {terms === "immediate" && !editing ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="s-method">결제수단</Label>
+              <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
+                <SelectTrigger id="s-method" className="h-9 w-full bg-card">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PAYMENT_METHOD).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="s-due">결제 예정일</Label>
+              <Input id="s-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-9" />
+            </div>
+          )}
+          <label className="flex items-center gap-2 self-end pb-2 text-[13px]">
+            <input type="checkbox" className="accent-primary" checked={vatApplied} onChange={(e) => setVatApplied(e.target.checked)} />
+            부가세 별도 청구
+          </label>
+          <label className="flex items-center gap-2 self-end pb-2 text-[13px]">
+            <input type="checkbox" className="accent-primary" checked={taxInvoice} onChange={(e) => setTaxInvoice(e.target.checked)} />
+            세금계산서 발행
+          </label>
+        </div>
+        <p className="mt-2 text-[12px] text-steel">
+          받을 금액 <b className="tabular text-foreground">{krw(receivable)}</b>
+          {vatApplied ? " (공급가 + 부가세 10%)" : " (부가세 없음)"}
+          {editing ? " · 결제 구분과 수금 내역은 전표 상세에서 관리합니다." : terms === "immediate" ? " · 저장 시 출고일자로 수금 처리됩니다." : " · 미수로 남고, 전표 상세에서 수금을 등록합니다."}
+        </p>
       </div>
 
       <div className="space-y-1.5">

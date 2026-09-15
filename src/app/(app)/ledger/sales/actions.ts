@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { salesOrders } from "@/db/schema";
+import { payments, salesOrders } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import type { ActionResult } from "@/lib/action-result";
 
@@ -11,6 +11,8 @@ export async function deleteSale(id: number): Promise<ActionResult> {
   await requireModule("parts");
   const [o] = await db.select({ docNo: salesOrders.docNo }).from(salesOrders).where(eq(salesOrders.id, id));
   if (!o) return { ok: false, error: "전표를 찾을 수 없습니다." };
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(payments).where(eq(payments.salesOrderId, id));
+  if (n > 0) return { ok: false, error: `수금 내역 ${n}건이 있는 전표입니다. 전표 상세에서 수금 내역을 먼저 삭제하세요.` };
   await db.transaction(async (tx) => {
     await tx.execute(sql`select public.fn_unpost_sale(${id})`);
     await tx.delete(salesOrders).where(eq(salesOrders.id, id));

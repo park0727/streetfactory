@@ -1,6 +1,6 @@
 import { asc, desc, eq, ilike, or, sql, type SQL, and } from "drizzle-orm";
 import { db } from "@/db";
-import { partners, vPartnerStats } from "@/db/schema";
+import { partners, vPartnerStats, vSalesSettlement } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { str } from "@/lib/query-params";
 import { PageHeader, Panel } from "@/components/page-header";
@@ -20,6 +20,11 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
   if (["dealer", "service_center", "direct_store", "online_mall", "other"].includes(type)) conds.push(eq(partners.type, type as typeof partners.$inferSelect.type));
   if (!inactive) conds.push(eq(partners.isActive, true));
 
+  const bal = db
+    .select({ partnerId: vSalesSettlement.partnerId, balance: sql<number>`sum(greatest(${vSalesSettlement.balance}, 0))::numeric`.as("balance") })
+    .from(vSalesSettlement)
+    .groupBy(vSalesSettlement.partnerId)
+    .as("bal");
   const rows = await db
     .select({
       id: partners.id,
@@ -27,6 +32,8 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
       name: partners.name,
       type: partners.type,
       bizNo: partners.bizNo,
+      defaultTerms: partners.defaultTerms,
+      defaultVat: partners.defaultVat,
       contactName: partners.contactName,
       phone: partners.phone,
       email: partners.email,
@@ -36,9 +43,11 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
       orderCount: sql<number>`coalesce(${vPartnerStats.orderCount}, 0)`,
       totalAmount: sql<number>`coalesce(${vPartnerStats.totalAmount}, 0)`,
       lastDate: vPartnerStats.lastDate,
+      balance: sql<number>`coalesce(${bal.balance}, 0)`,
     })
     .from(partners)
     .leftJoin(vPartnerStats, eq(vPartnerStats.partnerId, partners.id))
+    .leftJoin(bal, eq(bal.partnerId, partners.id))
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(sql`coalesce(${vPartnerStats.totalAmount}, 0)`), asc(partners.name));
 

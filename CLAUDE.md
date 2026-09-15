@@ -49,6 +49,8 @@ npm run preview      # Workers 런타임으로 로컬 실행
 - **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외). 전표 수정 = 트랜잭션 안에서 unpost → 라인 교체 → post (전표번호 유지).
 - 수정·삭제 권한은 부품 모듈 사용자 전체 (소규모 팀). 사용자 관리만 admin 전용.
 - 저장·삭제 성공 시 `useActionToast` / `ConfirmButton` 이 `router.refresh()` 를 호출한다. 목록 갱신을 위해 별도 처리하지 않아도 된다.
+- **미수금은 `payments` 합계로만 계산**한다 (`v_sales_settlement`). 전표에 결제상태 컬럼을 두지 않는다. 총액은 `vat_applied` 면 공급가 × 1.1.
+- 인쇄 페이지(`src/app/(print)`) 에는 원가·이익을 절대 넣지 않는다 (배달 기사용).
 - 판매 라인 `unit_price`/`unit_cost` 는 스냅샷이다. 마스터 변경으로 소급 수정하지 않는다.
 - `parts.code` 는 수정 불가. 삭제 대신 `status = discontinued`.
 - 전표번호는 `fn_next_seq(prefix, year)` 로 채번. 앱에서 max+1 하지 않는다.

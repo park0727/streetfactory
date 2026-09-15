@@ -17,6 +17,8 @@ const schema = z.object({
     .transform((v) => v.replace(/\D/g, ""))
     .refine((v) => v === "" || v.length === 10, "사업자등록번호는 숫자 10자리입니다 (예: 123-45-67890).")
     .optional(),
+  defaultTerms: z.enum(["immediate", "credit"]).default("immediate"),
+  defaultVat: z.boolean(),
   contactName: z.string().trim().max(50).optional(),
   phone: z.string().trim().max(30).optional(),
   email: z.string().trim().max(100).optional(),
@@ -30,10 +32,11 @@ export async function savePartner(_: unknown, fd: FormData): Promise<ActionResul
   const raw: Record<string, unknown> = {};
   fd.forEach((v, k) => (raw[k] = v === "" ? undefined : v));
   raw.isActive = fd.get("isActive") === "true"; // 체크 해제 시 값이 실리지 않으므로 명시적으로 판정
+  raw.defaultVat = fd.get("defaultVat") === "true";
   const r = schema.safeParse(raw);
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
   const { id, ...v } = r.data;
-  const values = { name: v.name, type: v.type, bizNo: v.bizNo || null, contactName: v.contactName ?? null, phone: v.phone ?? null, email: v.email ?? null, address: v.address ?? null, memo: v.memo ?? null, isActive: v.isActive };
+  const values = { name: v.name, type: v.type, bizNo: v.bizNo || null, defaultTerms: v.defaultTerms, defaultVat: v.defaultVat, contactName: v.contactName ?? null, phone: v.phone ?? null, email: v.email ?? null, address: v.address ?? null, memo: v.memo ?? null, isActive: v.isActive };
   try {
     if (id) await db.update(partners).set(values).where(eq(partners.id, id));
     else {

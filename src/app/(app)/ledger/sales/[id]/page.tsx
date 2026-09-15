@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { db } from "@/db";
-import { parts, partners, profiles, salesLines, salesOrders } from "@/db/schema";
+import { parts, partners, payments, profiles, salesLines, salesOrders, vSalesSettlement } from "@/db/schema";
+import { todayKST } from "@/lib/dates";
+import { SettlementPanel } from "./settlement";
 import { requireModule } from "@/lib/auth";
-import { krw, num, pct, withVat } from "@/lib/format";
+import { krw, num, pct } from "@/lib/format";
 import { PageHeader, Panel } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +28,10 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
       docDate: salesOrders.docDate,
       channel: salesOrders.channel,
       memo: salesOrders.memo,
+      vatApplied: salesOrders.vatApplied,
+      taxInvoiceIssued: salesOrders.taxInvoiceIssued,
+      taxInvoiceDate: salesOrders.taxInvoiceDate,
+      dueDate: salesOrders.dueDate,
       createdAt: salesOrders.createdAt,
       partnerId: partners.id,
       partnerName: partners.name,
@@ -45,6 +51,15 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
     .where(eq(salesLines.orderId, orderId))
     .orderBy(asc(salesLines.lineNo));
 
+  const [[st], pays] = await Promise.all([
+    db.select().from(vSalesSettlement).where(eq(vSalesSettlement.orderId, orderId)),
+    db
+      .select({ id: payments.id, paidAt: payments.paidAt, amount: payments.amount, method: payments.method, memo: payments.memo, createdByName: profiles.name })
+      .from(payments)
+      .leftJoin(profiles, eq(profiles.id, payments.createdBy))
+      .where(eq(payments.salesOrderId, orderId))
+      .orderBy(asc(payments.paidAt), asc(payments.id)),
+  ]);
   const amount = lines.reduce((a, l) => a + l.qty * l.unitPrice, 0);
   const cost = lines.reduce((a, l) => a + l.qty * l.unitCost, 0);
   const profit = amount - cost;
@@ -61,6 +76,11 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
               <Link href="/ledger/sales">
                 <ArrowLeft /> 목록
               </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/print/sales?ids=${o.id}`} target="_blank" rel="noopener">
+                <Printer /> 출고증 인쇄
+              </a>
             </Button>
             <LedgerRowActions kind="sales" id={o.id} docNo={o.docNo} size="sm" withLabels />
           </>
@@ -101,11 +121,25 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
           </Table>
         </Panel>
         <div className="space-y-4">
+          <SettlementPanel
+            orderId={o.id}
+            docNo={o.docNo}
+            amountSupply={Number(st?.amountSupply ?? amount)}
+            amountTotal={Number(st?.amountTotal ?? amount)}
+            vatApplied={o.vatApplied}
+            paid={Number(st?.paid ?? 0)}
+            balance={Number(st?.balance ?? amount)}
+            payStatus={st?.payStatus ?? "unpaid"}
+            dueDate={o.dueDate}
+            taxInvoiceIssued={o.taxInvoiceIssued}
+            taxInvoiceDate={o.taxInvoiceDate}
+            payments={pays}
+            today={todayKST()}
+          />
           <Panel className="p-4">
             <p className="th-label mb-2">합계 (공급가액)</p>
             <dl className="space-y-1.5 text-[13px]">
               <Row k="매출액" v={krw(amount)} strong />
-              <Row k="부가세 포함" v={krw(withVat(amount))} muted />
               <Row k="원가 (스냅샷)" v={krw(cost)} />
               <Row k="매출이익" v={krw(profit)} strong />
               <Row k="마진율" v={pct(amount > 0 ? (profit / amount) * 100 : 0)} />

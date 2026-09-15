@@ -12,7 +12,7 @@ export const metadata = { title: "입출고 등록" };
 export default async function EntryPage() {
   const me = await requireModule("parts");
   const [ps, ss, cs, feed] = await Promise.all([
-    db.select({ id: partners.id, name: partners.name, type: partners.type, code: partners.code }).from(partners).where(eq(partners.isActive, true)).orderBy(asc(partners.name)),
+    db.select({ id: partners.id, name: partners.name, type: partners.type, code: partners.code, defaultTerms: partners.defaultTerms, defaultVat: partners.defaultVat }).from(partners).where(eq(partners.isActive, true)).orderBy(asc(partners.name)),
     db.select({ id: suppliers.id, name: suppliers.name, country: suppliers.country }).from(suppliers).where(eq(suppliers.isActive, true)).orderBy(asc(suppliers.name)),
     db.select({ name: salesChannels.name }).from(salesChannels).orderBy(asc(salesChannels.sortOrder)),
     recentFeed(),

@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { and, asc, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { inboundLines, inboundOrders, parts, salesLines, salesOrders, vInventory } from "@/db/schema";
+import { inboundLines, inboundOrders, parts, payments, salesLines, salesOrders, vInventory, vSalesSettlement } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/auth";
 import { firstIssue, type ActionResult } from "@/lib/action-result";
@@ -88,10 +88,27 @@ export async function createSale(input: SaleInput): Promise<ActionResult<{ docNo
     const docNo = await nextDocNo(tx, "SLS", d.docDate);
     const [o] = await tx
       .insert(salesOrders)
-      .values({ docNo, docDate: d.docDate, partnerId: d.partnerId, channel: d.channel ?? null, memo: d.memo ?? null, createdBy: me.id })
+      .values({
+        docNo,
+        docDate: d.docDate,
+        partnerId: d.partnerId,
+        channel: d.channel ?? null,
+        memo: d.memo ?? null,
+        vatApplied: d.vatApplied,
+        taxInvoiceIssued: d.taxInvoiceIssued,
+        taxInvoiceDate: d.taxInvoiceIssued ? d.docDate : null,
+        dueDate: d.terms === "credit" ? (d.dueDate ?? null) : null,
+        createdBy: me.id,
+      })
       .returning({ id: salesOrders.id });
     await tx.insert(salesLines).values(d.lines.map((l, i) => ({ orderId: o.id, lineNo: i + 1, partId: l.partId, qty: l.qty, unitPrice: Math.round(l.unitPrice), unitCost: 0 })));
     await tx.execute(sql`select public.fn_post_sale(${o.id})`);
+    // 즉시 결제: 총액(부가세 반영)을 출고일에 수금 처리
+    if (d.terms === "immediate") {
+      const supply = d.lines.reduce((a, l) => a + l.qty * Math.round(l.unitPrice), 0);
+      const total = d.vatApplied ? Math.round(supply * 1.1) : supply;
+      if (total > 0) await tx.insert(payments).values({ salesOrderId: o.id, partnerId: d.partnerId, paidAt: d.docDate, amount: total, method: d.method, memo: "출고 시 즉시 결제", createdBy: me.id });
+    }
     return docNo;
   });
 
@@ -114,15 +131,34 @@ export async function updateSale(orderId: number, input: SaleInput): Promise<Act
   const r = saleSchema.safeParse(input);
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
   const d = r.data;
-  const [o] = await db.select({ id: salesOrders.id, docNo: salesOrders.docNo }).from(salesOrders).where(eq(salesOrders.id, orderId));
+  const [o] = await db.select({ id: salesOrders.id, docNo: salesOrders.docNo, taxInvoiceDate: salesOrders.taxInvoiceDate }).from(salesOrders).where(eq(salesOrders.id, orderId));
   if (!o) return { ok: false, error: "전표를 찾을 수 없습니다." };
   const stockError = await checkStock(d, me.role, orderId);
   if (stockError) return { ok: false, error: stockError };
+  // 이미 받은 돈보다 총액이 작아지면 안 된다
+  const [st] = await db.select({ paid: vSalesSettlement.paid }).from(vSalesSettlement).where(eq(vSalesSettlement.orderId, orderId));
+  const supply = d.lines.reduce((a, l) => a + l.qty * Math.round(l.unitPrice), 0);
+  const total = d.vatApplied ? Math.round(supply * 1.1) : supply;
+  if (st && Number(st.paid) > total) return { ok: false, error: `이미 수금한 금액(₩${Number(st.paid).toLocaleString()})이 새 총액(₩${total.toLocaleString()})보다 큽니다. 수금 내역을 먼저 정리하세요.` };
 
   await db.transaction(async (tx) => {
     await tx.execute(sql`select public.fn_unpost_sale(${orderId})`);
     await tx.delete(salesLines).where(eq(salesLines.orderId, orderId));
-    await tx.update(salesOrders).set({ docDate: d.docDate, partnerId: d.partnerId, channel: d.channel ?? null, memo: d.memo ?? null }).where(eq(salesOrders.id, orderId));
+    await tx
+      .update(salesOrders)
+      .set({
+        docDate: d.docDate,
+        partnerId: d.partnerId,
+        channel: d.channel ?? null,
+        memo: d.memo ?? null,
+        vatApplied: d.vatApplied,
+        taxInvoiceIssued: d.taxInvoiceIssued,
+        taxInvoiceDate: d.taxInvoiceIssued ? (o.taxInvoiceDate ?? d.docDate) : null,
+        dueDate: d.dueDate ?? null,
+      })
+      .where(eq(salesOrders.id, orderId));
+    // 거래처가 바뀌면 수금의 거래처도 따라간다
+    await tx.update(payments).set({ partnerId: d.partnerId }).where(eq(payments.salesOrderId, orderId));
     await tx.insert(salesLines).values(d.lines.map((l, i) => ({ orderId, lineNo: i + 1, partId: l.partId, qty: l.qty, unitPrice: Math.round(l.unitPrice), unitCost: 0 })));
     await tx.execute(sql`select public.fn_post_sale(${orderId})`);
   });

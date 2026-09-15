@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/page-header";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { bizNo, krw, num } from "@/lib/format";
 import { PARTNER_TYPE } from "@/lib/dates";
+import { PAYMENT_TERMS } from "@/lib/payments-shared";
 import { ConfirmButton } from "@/components/confirm-button";
 import { deletePartner, savePartner } from "./actions";
 
@@ -24,6 +25,9 @@ export type PartnerRow = {
   name: string;
   type: "dealer" | "service_center" | "direct_store" | "online_mall" | "other";
   bizNo: string | null;
+  defaultTerms: "immediate" | "credit";
+  defaultVat: boolean;
+  balance: number;
   contactName: string | null;
   phone: string | null;
   email: string | null;
@@ -50,6 +54,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
             <TableHead className="th-label">소재지</TableHead>
             <TableHead className="th-label w-[90px] text-right">출고건수</TableHead>
             <TableHead className="th-label w-[130px] text-right">누적 거래금액</TableHead>
+            <TableHead className="th-label w-[110px] text-right">미수 잔액</TableHead>
             <TableHead className="th-label w-[110px]">최근 거래일</TableHead>
             <TableHead className="w-[112px]" />
           </TableRow>
@@ -57,7 +62,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={10} className="p-0">
+              <TableCell colSpan={11} className="p-0">
                 <EmptyState title="거래처가 없습니다" hint="오른쪽 위 '거래처 등록' 으로 추가하세요." />
               </TableCell>
             </TableRow>
@@ -78,6 +83,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
               <TableCell className="max-w-[200px] truncate text-steel">{r.address ?? "—"}</TableCell>
               <TableCell className="tabular text-right">{num(r.orderCount)}</TableCell>
               <TableCell className="tabular text-right font-medium">{krw(r.totalAmount)}</TableCell>
+              <TableCell className={`tabular text-right ${Number(r.balance) > 0 ? "font-medium text-status-critical" : "text-steel"}`}>{Number(r.balance) > 0 ? krw(r.balance) : "—"}</TableCell>
               <TableCell className="tabular text-steel">{r.lastDate ?? "—"}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
                 <Button variant="ghost" size="icon-sm" asChild title="거래처 원장">
@@ -142,6 +148,22 @@ function PartnerDialog({ open, onClose, row }: { open: boolean; onClose: () => v
               </Select>
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="pt-terms">기본 결제 조건</Label>
+              <Select name="defaultTerms" defaultValue={row?.defaultTerms ?? "immediate"}>
+                <SelectTrigger id="pt-terms" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PAYMENT_TERMS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11.5px] text-steel">출고 등록에서 이 거래처를 고르면 자동 선택됩니다.</p>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="pt-bizno">사업자등록번호</Label>
               <Input id="pt-bizno" name="bizNo" defaultValue={row?.bizNo ? bizNo(row.bizNo) : ""} placeholder="123-45-67890" inputMode="numeric" maxLength={12} className="tabular" />
             </div>
@@ -165,6 +187,9 @@ function PartnerDialog({ open, onClose, row }: { open: boolean; onClose: () => v
               <Label htmlFor="pt-memo">메모</Label>
               <Textarea id="pt-memo" name="memo" defaultValue={row?.memo ?? ""} rows={2} maxLength={500} />
             </div>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <Checkbox name="defaultVat" value="true" defaultChecked={row?.defaultVat ?? true} /> 부가세 별도 청구 (세금계산서 거래처)
+            </label>
             <label className="flex items-center gap-2 text-sm sm:col-span-2">
               <Checkbox name="isActive" value="true" defaultChecked={row?.isActive ?? true} /> 거래 중 (출고 등록 목록에 표시)
             </label>

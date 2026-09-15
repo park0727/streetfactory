@@ -36,6 +36,8 @@ export const partnerType = pgEnum("partner_type", [
 export const salesSource = pgEnum("sales_source", ["sale", "repair"]);
 export const customsStatus = pgEnum("customs_status", ["pending", "cleared"]);
 export const movementType = pgEnum("movement_type", ["opening", "inbound", "sale", "adjustment"]);
+export const paymentTerms = pgEnum("payment_terms", ["immediate", "credit"]); // 즉시결제 / 외상
+export const paymentMethod = pgEnum("payment_method", ["cash", "transfer", "card", "other"]);
 
 // ---------- 공통 컬럼 ----------
 const krw = (name: string) => numeric(name, { precision: 14, scale: 0, mode: "number" });
@@ -112,6 +114,8 @@ export const partners = pgTable("partners", {
   name: text("name").notNull(),
   type: partnerType("type").notNull().default("dealer"),
   bizNo: text("biz_no"), // 사업자등록번호 (세금계산서용), 숫자 10자리 저장
+  defaultTerms: paymentTerms("default_terms").notNull().default("immediate"), // 출고 등록 시 자동 선택
+  defaultVat: boolean("default_vat").notNull().default(true), // 부가세 별도 청구(세금계산서) 기본값
   contactName: text("contact_name"),
   phone: text("phone"),
   email: text("email"),
@@ -134,6 +138,10 @@ export const salesOrders = pgTable(
     channel: text("channel"),
     source: salesSource("source").notNull().default("sale"),
     repairOrderId: bigint("repair_order_id", { mode: "number" }), // 2차 정비 모듈 연결
+    vatApplied: boolean("vat_applied").notNull().default(true), // true 면 받을 금액 = 공급가 × 1.1
+    taxInvoiceIssued: boolean("tax_invoice_issued").notNull().default(false),
+    taxInvoiceDate: date("tax_invoice_date"),
+    dueDate: date("due_date"), // 외상 결제 예정일
     memo: text("memo"),
     createdBy: uuid("created_by").references(() => profiles.id),
     createdAt: createdAt(),
@@ -157,6 +165,27 @@ export const salesLines = pgTable(
     unitCost: cost("unit_cost").notNull(), // 스냅샷 (판매 시점 avg_cost)
   },
   (t) => [index("sales_lines_part_idx").on(t.partId)],
+);
+
+// ---------- 수금 (미수금의 유일한 원천: 전표 총액 − 수금 합계 = 미수 잔액) ----------
+export const payments = pgTable(
+  "payments",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    salesOrderId: bigint("sales_order_id", { mode: "number" })
+      .notNull()
+      .references(() => salesOrders.id, { onDelete: "restrict" }),
+    partnerId: bigint("partner_id", { mode: "number" })
+      .notNull()
+      .references(() => partners.id),
+    paidAt: date("paid_at").notNull(),
+    amount: krw("amount").notNull(),
+    method: paymentMethod("method").notNull().default("transfer"),
+    memo: text("memo"),
+    createdBy: uuid("created_by").references(() => profiles.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index("payments_order_idx").on(t.salesOrderId), index("payments_partner_date_idx").on(t.partnerId, t.paidAt)],
 );
 
 // ---------- 입고 전표 ----------
@@ -275,6 +304,7 @@ export type SalesLine = typeof salesLines.$inferSelect;
 export type InboundOrder = typeof inboundOrders.$inferSelect;
 export type InboundLine = typeof inboundLines.$inferSelect;
 export type StockMovement = typeof stockMovements.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
 
 // sql 은 뷰/함수 정의(drizzle/custom SQL)에서 재사용
 export { sql };
@@ -313,6 +343,20 @@ export const vInventory = pgView("v_inventory", {
   adjustmentQty: integer("adjustment_qty").notNull(),
   stockStatus: text("stock_status").$type<"ok" | "low" | "out">().notNull(),
   stockValue: numeric("stock_value", { precision: 16, scale: 0, mode: "number" }).notNull(),
+}).existing();
+
+/** 전표별 정산: 총액(부가세 반영) − 수금 = 미수 잔액 */
+export const vSalesSettlement = pgView("v_sales_settlement", {
+  orderId: bigint("order_id", { mode: "number" }).notNull(),
+  partnerId: bigint("partner_id", { mode: "number" }).notNull(),
+  docDate: date("doc_date").notNull(),
+  vatApplied: boolean("vat_applied").notNull(),
+  dueDate: date("due_date"),
+  amountSupply: numeric("amount_supply", { precision: 16, scale: 0, mode: "number" }).notNull(),
+  amountTotal: numeric("amount_total", { precision: 16, scale: 0, mode: "number" }).notNull(),
+  paid: numeric("paid", { precision: 16, scale: 0, mode: "number" }).notNull(),
+  balance: numeric("balance", { precision: 16, scale: 0, mode: "number" }).notNull(),
+  payStatus: text("pay_status").$type<"unpaid" | "partial" | "paid">().notNull(),
 }).existing();
 
 export const vPartnerStats = pgView("v_partner_stats", {

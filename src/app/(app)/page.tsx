@@ -2,7 +2,7 @@ import Link from "next/link";
 import { and, asc, desc, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/db";
-import { inboundLines, inboundOrders, salesLines, salesOrders, vInventory } from "@/db/schema";
+import { inboundLines, inboundOrders, salesLines, salesOrders, vInventory, vSalesSettlement } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { addDays, monthStart, todayKST, yearStart } from "@/lib/dates";
 import { krw, num, pct } from "@/lib/format";
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
       .groupBy(vInventory.categoryName)
       .orderBy(desc(sql`sum(greatest(${vInventory.qty}, 0) * ${vInventory.avgCost})`)),
   ]);
-  const [countries, alerts] = await Promise.all([
+  const [countries, alerts, [recv]] = await Promise.all([
     db
       .select({
         country: sql<string>`coalesce(${inboundOrders.country}, '미지정')`,
@@ -82,6 +82,13 @@ export default async function DashboardPage() {
       .where(and(ne(vInventory.status, "discontinued"), ne(vInventory.stockStatus, "ok")))
       .orderBy(asc(sql`case ${vInventory.stockStatus} when 'out' then 0 else 1 end`), asc(sql`${vInventory.qty} - ${vInventory.safetyStock}`))
       .limit(8),
+    db
+      .select({
+        balance: sql<number>`coalesce(sum(greatest(${vSalesSettlement.balance}, 0)), 0)::numeric`,
+        orders: sql<number>`count(*) filter (where ${vSalesSettlement.balance} > 0)::int`,
+        overdue: sql<number>`count(*) filter (where ${vSalesSettlement.balance} > 0 and ${vSalesSettlement.dueDate} < ${today})::int`,
+      })
+      .from(vSalesSettlement),
   ]);
 
   // 12개월을 빈 달 포함해 채운다
@@ -99,13 +106,16 @@ export default async function DashboardPage() {
   return (
     <>
       <PageHeader title="대시보드" description={`${me.name}님, ${today} 기준 경영 현황입니다.`} />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <Kpi label="총 재고 평가액" value={krw(stock.value)} sub={`${num(stock.items)}종 · 평균원가 기준`} />
         <Kpi label="당월 매출" value={krw(month.amount)} sub={`${num(month.orders)}건 · ${mStart.slice(5, 7)}월`} />
         <Kpi label="누적 매출 (올해)" value={krw(year.amount)} sub={`${num(year.orders)}건`} />
         <Kpi label="매출이익 (올해)" value={krw(year.profit)} sub={`평균 마진율 ${pct(yearMargin)}`} tone={Number(year.profit) < 0 ? "critical" : undefined} />
         <Link href="/inventory?stock=alert" className="contents">
           <Kpi label="발주 필요 품목" value={num(stock.alerts)} unit="종" sub={`품절 ${num(stock.out)}종 · 눌러서 보기`} tone={stock.out > 0 ? "critical" : stock.alerts > 0 ? "warn" : undefined} />
+        </Link>
+        <Link href="/ledger/sales?pay=unpaid&from=2000-01-01" className="contents">
+          <Kpi label="총 미수금" value={krw(recv.balance)} sub={`미수 전표 ${num(recv.orders)}건 · 기한 경과 ${num(recv.overdue)}건`} tone={recv.overdue > 0 ? "critical" : Number(recv.balance) > 0 ? "warn" : undefined} />
         </Link>
       </div>
 
