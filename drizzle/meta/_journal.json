@@ -36,6 +36,13 @@
       "when": 1789462832312,
       "tag": "0004_settlement_view",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789463483953,
+      "tag": "0005_vat_default_off",
+      "breakpoints": true
     }
   ]
 }

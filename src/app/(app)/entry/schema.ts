@@ -12,7 +12,7 @@ export const saleSchema = z.object({
   terms: z.enum(["immediate", "credit"]).default("immediate"),
   method: z.enum(["cash", "transfer", "card", "other"]).default("transfer"), // 즉시 결제일 때
   dueDate: dateStr.optional(), // 외상일 때 결제 예정일
-  vatApplied: z.boolean().default(true), // 부가세 별도 청구 → 받을 금액 = 공급가 × 1.1
+  vatApplied: z.boolean().default(false), // 부가세 별도 청구 → 받을 금액 = 공급가 × 1.1 (기본 해제)
   taxInvoiceIssued: z.boolean().default(false),
   lines: z
     .array(

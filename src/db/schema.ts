@@ -115,7 +115,7 @@ export const partners = pgTable("partners", {
   type: partnerType("type").notNull().default("dealer"),
   bizNo: text("biz_no"), // 사업자등록번호 (세금계산서용), 숫자 10자리 저장
   defaultTerms: paymentTerms("default_terms").notNull().default("immediate"), // 출고 등록 시 자동 선택
-  defaultVat: boolean("default_vat").notNull().default(true), // 부가세 별도 청구(세금계산서) 기본값
+  defaultVat: boolean("default_vat").notNull().default(false), // 부가세 별도 청구(세금계산서) 기본값. 기본 해제
   contactName: text("contact_name"),
   phone: text("phone"),
   email: text("email"),
@@ -138,7 +138,7 @@ export const salesOrders = pgTable(
     channel: text("channel"),
     source: salesSource("source").notNull().default("sale"),
     repairOrderId: bigint("repair_order_id", { mode: "number" }), // 2차 정비 모듈 연결
-    vatApplied: boolean("vat_applied").notNull().default(true), // true 면 받을 금액 = 공급가 × 1.1
+    vatApplied: boolean("vat_applied").notNull().default(false), // true 면 받을 금액 = 공급가 × 1.1
     taxInvoiceIssued: boolean("tax_invoice_issued").notNull().default(false),
     taxInvoiceDate: date("tax_invoice_date"),
     dueDate: date("due_date"), // 외상 결제 예정일

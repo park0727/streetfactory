@@ -55,7 +55,7 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
   const [terms, setTerms] = useState<PaymentTerms>(initial ? (initial.paid > 0 && initial.dueDate == null ? "immediate" : initial.dueDate ? "credit" : initial.paid > 0 ? "immediate" : "credit") : "immediate");
   const [method, setMethod] = useState<PaymentMethod>("transfer");
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
-  const [vatApplied, setVatApplied] = useState(initial?.vatApplied ?? true);
+  const [vatApplied, setVatApplied] = useState(initial?.vatApplied ?? false);
   const [taxInvoice, setTaxInvoice] = useState(initial?.taxInvoiceIssued ?? false);
   const [lines, setLines] = useState<Line[]>(initial ? initial.lines.map((l) => ({ ...newLine(), part: l.part, qty: l.qty, unitPrice: l.unitPrice })) : [newLine()]);
   // 수정 모드: 이 전표가 이미 차감한 수량은 가용재고에 더해서 본다
