@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu, UserRound } from "lucide-react";
@@ -52,11 +53,12 @@ function NavList({ user, onNavigate }: Props & { onNavigate?: () => void }) {
   );
 }
 
-function UserBox({ user }: Props) {
+function UserBox({ user, onNavigate }: Props & { onNavigate?: () => void }) {
   return (
     <div className="flex items-center gap-2 border-t border-sidebar-border px-3 py-3">
       <Link
         href="/settings/profile"
+        onClick={onNavigate}
         className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-signal"
       >
         <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-foreground">
@@ -95,12 +97,16 @@ export function Sidebar({ user }: Props) {
 }
 
 export function MobileHeader({ user }: Props) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  // 경로가 바뀌면(링크 이동, 뒤로가기 포함) 드로어를 닫는다
+  useEffect(() => setOpen(false), [pathname]);
   return (
     <header
       className="sticky z-30 flex h-12 items-center gap-1 bg-sidebar px-2 text-sidebar-foreground md:hidden"
       style={{ top: "env(safe-area-inset-top, 0px)" }}
     >
-      <Sheet>
+      <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="text-white hover:bg-sidebar-accent" aria-label="메뉴 열기">
             <Menu className="size-5" />
@@ -110,8 +116,8 @@ export function MobileHeader({ user }: Props) {
           <SheetTitle className="px-6 pt-6 pb-1">
             <Brand className="text-white" />
           </SheetTitle>
-          <NavList user={user} />
-          <UserBox user={user} />
+          <NavList user={user} onNavigate={() => setOpen(false)} />
+          <UserBox user={user} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
       <Brand size="sm" className="text-white" />
