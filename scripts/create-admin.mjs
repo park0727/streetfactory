@@ -11,9 +11,10 @@ if (!email) {
   console.error("사용법: node --env-file=.env.local scripts/create-admin.mjs <email> [이름]");
   process.exit(1);
 }
-const { NEXT_PUBLIC_SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: key, DATABASE_URL } = process.env;
+const { NEXT_PUBLIC_SUPABASE_URL: url, DATABASE_URL } = process.env;
+const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key || !DATABASE_URL) {
-  console.error(".env.local 에 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DATABASE_URL 이 필요합니다.");
+  console.error(".env.local 에 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, DATABASE_URL 이 필요합니다.");
   process.exit(1);
 }
 

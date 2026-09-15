@@ -1,5 +1,9 @@
-import "dotenv/config";
+import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
+
+// .env.local 을 우선 읽고, 없으면 .env
+config({ path: ".env.local" });
+config();
 
 export default defineConfig({
   dialect: "postgresql",
