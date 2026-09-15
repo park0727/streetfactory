@@ -76,6 +76,7 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 - 폼은 `useActionState` + `useActionToast`. 삭제·비활성화는 `ConfirmButton` 에 바인딩된 액션을 넘긴다.
 - **체크박스는 해제 시 FormData 에 값이 실리지 않는다.** 서버에서 `fd.get("x") === "true"` 로 명시 판정하고 `z.boolean()` 을 쓴다. `z.coerce.boolean().default(true)` 는 해제 저장이 안 되는 버그를 만든다.
 - 참고 구현: `src/app/(app)/settings/master`(단순 CRUD), `src/app/(app)/parts`(검색·필터·엑셀), `src/app/(app)/entry`(복합 폼 + 서버 액션 JSON 입력).
+- **단일 테이블 select 안의 상관 서브쿼리**에서 바깥 컬럼은 `${table.col}` 대신 `sales_orders.id` 처럼 테이블명을 직접 쓴다. drizzle 이 조인 없는 select 의 컬럼을 `"id"` 로만 렌더링해 서브쿼리의 같은 이름 컬럼을 가리키는 버그가 있었다.
 - 목록 필터는 URL 쿼리(`useUrlFilters`, `useDebouncedParam`) 로. 서버 페이지가 `searchParams` 를 읽어 쿼리한다.
 - 엑셀 다운로드 = `/<route>/export` 라우트 핸들러(JSON) + 클라이언트 `downloadXlsx`. 업로드 = 클라이언트 `readXlsx` → 서버 검증 액션 → 미리보기 → 저장 액션.
 - 화면 검증: 로컬 Postgres `streetfactory_test` 에 `scripts/seed-sample.mjs` 로 샘플을 넣고 `DATABASE_URL=postgresql://localhost:5432/streetfactory_test npm run dev` 로 띄운다. 운영 DB 에는 샘플을 넣지 않는다.

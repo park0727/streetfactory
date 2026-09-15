@@ -1,6 +1,6 @@
 import { asc, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, parts, salesChannels, suppliers } from "@/db/schema";
+import { categories, salesChannels, suppliers } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +19,7 @@ export default async function MasterDataPage() {
         id: categories.id,
         name: categories.name,
         sortOrder: categories.sortOrder,
-        usage: sql<number>`(select count(*)::int from ${parts} where ${parts.categoryId} = ${categories.id})`,
+        usage: sql<number>`(select count(*)::int from parts p where p.category_id = categories.id)`,
       })
       .from(categories)
       .orderBy(asc(categories.sortOrder), asc(categories.name)),
@@ -32,7 +32,7 @@ export default async function MasterDataPage() {
         contact: suppliers.contact,
         memo: suppliers.memo,
         isActive: suppliers.isActive,
-        partCount: sql<number>`(select count(*)::int from ${parts} where ${parts.supplierId} = ${suppliers.id})`,
+        partCount: sql<number>`(select count(*)::int from parts p where p.supplier_id = suppliers.id)`,
       })
       .from(suppliers)
       .orderBy(asc(suppliers.name)),

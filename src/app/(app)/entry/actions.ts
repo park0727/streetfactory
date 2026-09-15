@@ -213,7 +213,8 @@ export async function updateInbound(orderId: number, input: InboundInput): Promi
   return { ok: true, message: `${o.docNo} 를 수정했습니다.`, data: { docNo: o.docNo } };
 }
 
-/** 최근 판매·입고 5건 (하단 피드). 원장과 같은 기준: 전표일자 내림차순, 같은 날이면 나중 전표가 위. */
+/** 최근 판매·입고 5건 (하단 피드). 원장과 같은 기준: 전표일자 내림차순, 같은 날이면 나중 전표가 위.
+ *  주의: 단일 테이블 select 안의 서브쿼리에서 바깥 컬럼은 `sales_orders.id` 처럼 테이블명을 직접 쓴다 (drizzle 이 `"id"` 로만 렌더링해 서브쿼리 컬럼과 충돌). */
 export async function recentFeed() {
   const [sales, inbound] = await Promise.all([
     db
@@ -221,9 +222,9 @@ export async function recentFeed() {
         id: salesOrders.id,
         docNo: salesOrders.docNo,
         docDate: salesOrders.docDate,
-        partner: sql<string>`(select name from partners p where p.id = ${salesOrders.partnerId})`,
-        lines: sql<number>`(select count(*)::int from sales_lines l where l.order_id = ${salesOrders.id})`,
-        amount: sql<number>`(select coalesce(sum(l.qty * l.unit_price), 0)::numeric from sales_lines l where l.order_id = ${salesOrders.id})`,
+        partner: sql<string>`(select name from partners p where p.id = sales_orders.partner_id)`,
+        lines: sql<number>`(select count(*)::int from sales_lines l where l.order_id = sales_orders.id)`,
+        amount: sql<number>`(select coalesce(sum(l.qty * l.unit_price), 0)::numeric from sales_lines l where l.order_id = sales_orders.id)`,
         createdAt: salesOrders.createdAt,
       })
       .from(salesOrders)
@@ -234,9 +235,9 @@ export async function recentFeed() {
         id: inboundOrders.id,
         docNo: inboundOrders.docNo,
         docDate: inboundOrders.docDate,
-        supplier: sql<string>`(select name from suppliers s where s.id = ${inboundOrders.supplierId})`,
-        lines: sql<number>`(select count(*)::int from inbound_lines l where l.order_id = ${inboundOrders.id})`,
-        cost: sql<number>`(select coalesce(sum(l.qty * l.landed_unit_cost), 0)::numeric from inbound_lines l where l.order_id = ${inboundOrders.id})`,
+        supplier: sql<string>`(select name from suppliers s where s.id = inbound_orders.supplier_id)`,
+        lines: sql<number>`(select count(*)::int from inbound_lines l where l.order_id = inbound_orders.id)`,
+        cost: sql<number>`(select coalesce(sum(l.qty * l.landed_unit_cost), 0)::numeric from inbound_lines l where l.order_id = inbound_orders.id)`,
         createdAt: inboundOrders.createdAt,
       })
       .from(inboundOrders)
