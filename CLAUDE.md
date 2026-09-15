@@ -64,7 +64,10 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 ## 패턴
 - 화면 = `page.tsx`(RSC, 조회) + `actions.ts`("use server", zod 검증, revalidatePath) + 클라이언트 표/폼 컴포넌트.
 - 폼은 `useActionState` + `useActionToast`. 삭제·비활성화는 `ConfirmButton` 에 바인딩된 액션을 넘긴다.
-- 참고 구현: `src/app/(app)/settings/master`, `src/app/(app)/settings/users`.
+- 참고 구현: `src/app/(app)/settings/master`(단순 CRUD), `src/app/(app)/parts`(검색·필터·엑셀), `src/app/(app)/entry`(복합 폼 + 서버 액션 JSON 입력).
+- 목록 필터는 URL 쿼리(`useUrlFilters`, `useDebouncedParam`) 로. 서버 페이지가 `searchParams` 를 읽어 쿼리한다.
+- 엑셀 다운로드 = `/<route>/export` 라우트 핸들러(JSON) + 클라이언트 `downloadXlsx`. 업로드 = 클라이언트 `readXlsx` → 서버 검증 액션 → 미리보기 → 저장 액션.
+- 화면 검증: 로컬 Postgres `streetfactory_test` 에 `scripts/seed-sample.mjs` 로 샘플을 넣고 `DATABASE_URL=postgresql://localhost:5432/streetfactory_test npm run dev` 로 띄운다. 운영 DB 에는 샘플을 넣지 않는다.
 
 ## UI 규칙
 숫자 우측 정렬, `₩#,##0`, 상태 뱃지 색(정상 green / 부족 amber / 품절 red), 표 헤더 sticky, 모바일 반응형 필수.
