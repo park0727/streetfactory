@@ -1,0 +1,60 @@
+# Streetfactory ERP
+
+오토바이 수리·부품 업체의 수입 부품 재고·판매·거래처 관리 시스템. 사용자 2~3명, 운영비 0원 목표.
+
+## 문서 (먼저 읽을 것)
+- `docs/SPEC.md` — 확정 요구사항과 비즈니스 규칙
+- `docs/SCHEMA.md` — 데이터 모델 설명. 원본은 `src/db/schema.ts`
+- `docs/SCREENS.md` — 라우트·화면 목록과 공통 UI 규칙
+
+## 스택
+Next.js 16 App Router + TypeScript, Tailwind v4 + shadcn/ui(radix-nova), Drizzle + postgres.js,
+Supabase(Postgres + Auth, 서울), Cloudflare Workers(OpenNext). 패키지 매니저는 npm.
+
+## 명령
+```
+npm run dev          # 로컬 개발 (.env.local 필요)
+npm run typecheck    # tsc
+npm run lint
+npm run db:generate  # 스키마 변경 → drizzle/ 마이그레이션 생성
+npm run db:migrate   # DIRECT_URL(5432) 로 마이그레이션 적용
+npm run preview      # Workers 런타임으로 로컬 실행 (.dev.vars 필요)
+npm run deploy       # Cloudflare 배포
+```
+
+## 반드시 지킬 규칙
+- **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.
+- **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외).
+- 판매 라인 `unit_price`/`unit_cost` 는 스냅샷이다. 마스터 변경으로 소급 수정하지 않는다.
+- `parts.code` 는 수정 불가. 삭제 대신 `status = discontinued`.
+- 전표번호는 `fn_next_seq(prefix, year)` 로 채번. 앱에서 max+1 하지 않는다.
+- 금액은 공급가액(부가세 별도) 저장. 원화 정수, 원가 소수 2자리, 외화·환율 소수 4자리.
+- **엑셀 생성·파싱은 브라우저에서** (Workers CPU 10ms 제한). 서버는 JSON 만 받는다.
+- DB 접근은 서버(Server Action / RSC) 에서 Drizzle 로만. 브라우저에서 supabase-js 로 테이블 접근 금지 (RLS 로 차단되어 있음).
+- 권한: `admin` / `staff`, 모듈 플래그 `can_parts` / `can_repair`. 검사는 `src/lib/auth.ts` 헬퍼로.
+- 뷰·함수 변경은 `drizzle-kit generate --custom` 으로 SQL 마이그레이션을 추가한다. 기존 마이그레이션 파일은 수정하지 않는다.
+
+## 구조
+```
+src/app/(auth)/login       로그인
+src/app/(app)/…            로그인 필요 화면 (docs/SCREENS.md)
+src/db/schema.ts           Drizzle 스키마
+src/db/index.ts            DB 클라이언트
+src/lib/supabase/          server / client / admin 클라이언트
+src/lib/auth.ts            현재 사용자·권한 헬퍼
+src/proxy.ts               세션 갱신 + 비로그인 리다이렉트
+drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수·RLS)
+```
+
+## UI 규칙
+숫자 우측 정렬, `₩#,##0`, 상태 뱃지 색(정상 green / 부족 amber / 품절 red), 표 헤더 sticky, 모바일 반응형 필수.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

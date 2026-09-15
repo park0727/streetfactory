@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "streetfactory",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    { "binding": "WORKER_SELF_REFERENCE", "service": "streetfactory" }
+  ],
+  "observability": { "enabled": true }
+  // 비밀값(DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY 등)은 `wrangler secret put` 으로 등록.
+  // 공개값(NEXT_PUBLIC_*)은 빌드 시 .env 에서 인라인됨.
+}
