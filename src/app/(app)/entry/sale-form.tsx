@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -76,6 +77,11 @@ export function SaleForm({ partners, channels, isAdmin, today }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {partners.length === 0 && (
+        <p className="rounded-md border border-status-warn/40 bg-status-warn/5 px-3 py-2 text-[13px] text-status-warn">
+          등록된 거래처가 없습니다. <Link href="/partners" className="font-medium underline">거래처 화면</Link>에서 먼저 등록하세요.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-[130px_1fr_140px]">
         <div className="space-y-1.5">
           <Label htmlFor="s-date">출고일</Label>

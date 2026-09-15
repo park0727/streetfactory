@@ -26,16 +26,18 @@ type Props = {
   variant?: "ghost" | "outline" | "destructive" | "default" | "secondary" | "link";
   size?: "sm" | "default" | "icon" | "lg" | "icon-sm" | "icon-lg" | "xs" | "icon-xs";
   className?: string;
+  /** 아이콘만 있는 버튼의 접근성 이름 (title + aria-label) */
+  label?: string;
 };
 
 /** 확인 대화상자를 거쳐 서버 액션을 실행하는 버튼. 삭제·비활성화 같은 되돌리기 어려운 작업에 쓴다. */
-export function ConfirmButton({ action, title, description, confirmLabel = "확인", destructive, children, variant = "ghost", size = "sm", className }: Props) {
+export function ConfirmButton({ action, title, description, confirmLabel = "확인", destructive, children, variant = "ghost", size = "sm", className, label }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant={variant} size={size} className={className}>
+        <Button variant={variant} size={size} className={className} title={label} aria-label={label}>
           {children}
         </Button>
       </AlertDialogTrigger>

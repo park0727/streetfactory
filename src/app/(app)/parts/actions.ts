@@ -2,19 +2,32 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { parts, stockMovements } from "@/db/schema";
+import { categories, parts, stockMovements } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { dbErrorMessage, firstIssue, type ActionResult } from "@/lib/action-result";
-import { partSchema, formToObject } from "./schema";
+import { partFormSchema, formToObject } from "./schema";
 
 export async function savePart(_: unknown, fd: FormData): Promise<ActionResult> {
   const me = await requireModule("parts");
-  const r = partSchema.safeParse(formToObject(fd));
+  const r = partFormSchema.safeParse(formToObject(fd));
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
-  const { id, openingQty, openingUnitCost, ...v } = r.data;
+  const { id, openingQty, openingUnitCost, newCategory, ...v } = r.data;
+
+  // 새 카테고리 이름이 오면 만들거나(이미 있으면) 기존 것을 쓴다
+  let categoryId = v.categoryId;
+  if (newCategory) {
+    const [existing] = await db.select({ id: categories.id }).from(categories).where(eq(categories.name, newCategory));
+    if (existing) categoryId = existing.id;
+    else {
+      const [c] = await db.insert(categories).values({ name: newCategory, sortOrder: 99 }).returning({ id: categories.id });
+      categoryId = c.id;
+    }
+  }
+  if (!categoryId) return { ok: false, error: "카테고리를 선택하거나 새 이름을 입력하세요." };
+
   const values = {
     name: v.name,
-    categoryId: v.categoryId,
+    categoryId,
     spec: v.spec ?? null,
     manufacturer: v.manufacturer ?? null,
     country: v.country ?? null,
@@ -56,6 +69,7 @@ export async function savePart(_: unknown, fd: FormData): Promise<ActionResult> 
   }
   revalidatePath("/parts");
   revalidatePath("/inventory");
+  if (newCategory) revalidatePath("/settings/master");
   return { ok: true, message: id ? "부품 정보를 수정했습니다." : `${v.code} 를 등록했습니다.` };
 }
 

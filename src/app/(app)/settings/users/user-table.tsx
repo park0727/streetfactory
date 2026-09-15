@@ -118,6 +118,7 @@ export function UserTable({ rows, meId }: { rows: UserRow[]; meId: string }) {
                         destructive
                         size="icon-sm"
                         className="text-destructive"
+                        label="비활성화"
                       >
                         <UserX />
                       </ConfirmButton>
@@ -128,6 +129,7 @@ export function UserTable({ rows, meId }: { rows: UserRow[]; meId: string }) {
                         description="다시 로그인할 수 있게 됩니다."
                         confirmLabel="활성화"
                         size="icon-sm"
+                        label="활성화"
                       >
                         <UserCheck />
                       </ConfirmButton>

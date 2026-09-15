@@ -68,6 +68,7 @@ export function SimpleList({ label, rows, usageLabel, save, remove }: Props) {
                     destructive
                     size="icon-sm"
                     className="text-destructive"
+                    label="삭제"
                   >
                     <Trash2 />
                   </ConfirmButton>

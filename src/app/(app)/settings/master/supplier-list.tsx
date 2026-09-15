@@ -82,6 +82,7 @@ export function SupplierList({ rows }: { rows: SupplierRow[] }) {
                     destructive
                     size="icon-sm"
                     className="text-destructive"
+                    label="삭제"
                   >
                     <Trash2 />
                   </ConfirmButton>

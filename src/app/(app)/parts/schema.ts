@@ -11,7 +11,8 @@ export const partSchema = z.object({
     .toUpperCase()
     .regex(CODE_RE, "부품코드는 영문 대문자·숫자·기호(- _ . /) 2~40자입니다."),
   name: z.string().trim().min(1, "부품명을 입력하세요.").max(120),
-  categoryId: z.coerce.number().int().positive("카테고리를 선택하세요."),
+  categoryId: z.coerce.number().int().positive().optional(),
+  newCategory: z.string().trim().min(1).max(50).optional(),
   spec: z.string().trim().max(200).optional(),
   manufacturer: z.string().trim().max(80).optional(),
   country: z.string().trim().max(40).optional(),
@@ -26,6 +27,9 @@ export const partSchema = z.object({
   openingUnitCost: z.coerce.number().min(0).optional(),
 });
 export type PartInput = z.infer<typeof partSchema>;
+
+/** 카테고리는 기존 선택 또는 새 이름 중 하나가 있어야 한다 */
+export const partFormSchema = partSchema.refine((v) => v.categoryId || v.newCategory, { path: ["categoryId"], message: "카테고리를 선택하거나 새 이름을 입력하세요." });
 
 /** FormData → 객체. 빈 문자열과 셀렉트의 "none" 은 undefined 로. */
 export function formToObject(fd: FormData) {

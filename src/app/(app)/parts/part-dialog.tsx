@@ -1,5 +1,5 @@
 "use client";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -31,10 +31,15 @@ export type Sup = { id: number; name: string; country: string };
 
 type Props = { open: boolean; onClose: () => void; part: PartRow | null; cats: Cat[]; sups: Sup[] };
 
+const NEW = "__new__";
+
 export function PartDialog({ open, onClose, part, cats, sups }: Props) {
   const [state, action, pending] = useActionState(savePart, undefined);
   useActionToast(state, onClose);
   const isNew = !part;
+  // 카테고리가 하나도 없으면 바로 새 이름 입력 모드
+  const [catValue, setCatValue] = useState<string>(part ? String(part.categoryId) : cats.length === 0 ? NEW : "");
+  const catIsNew = catValue === NEW;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -61,8 +66,8 @@ export function PartDialog({ open, onClose, part, cats, sups }: Props) {
             <Field label="부품명" htmlFor="p-name" className="sm:col-span-4">
               <Input id="p-name" name="name" defaultValue={part?.name ?? ""} required maxLength={120} autoFocus={!isNew} />
             </Field>
-            <Field label="카테고리" htmlFor="p-cat" className="sm:col-span-2">
-              <Select name="categoryId" defaultValue={part ? String(part.categoryId) : undefined} required>
+            <Field label="카테고리" htmlFor="p-cat" className="sm:col-span-2" hint={cats.length === 0 ? "아직 없음 · 새로 입력" : undefined}>
+              <Select value={catValue} onValueChange={setCatValue}>
                 <SelectTrigger id="p-cat" className="w-full">
                   <SelectValue placeholder="선택" />
                 </SelectTrigger>
@@ -72,8 +77,11 @@ export function PartDialog({ open, onClose, part, cats, sups }: Props) {
                       {c.name}
                     </SelectItem>
                   ))}
+                  <SelectItem value={NEW}>+ 새 카테고리 직접 입력</SelectItem>
                 </SelectContent>
               </Select>
+              {!catIsNew && catValue && <input type="hidden" name="categoryId" value={catValue} />}
+              {catIsNew && <Input name="newCategory" placeholder="새 카테고리 이름 (예: 브레이크)" required maxLength={50} autoFocus className="mt-1.5" />}
             </Field>
             <Field label="규격 / 호환기종" htmlFor="p-spec" className="sm:col-span-4">
               <Input id="p-spec" name="spec" defaultValue={part?.spec ?? ""} placeholder="Honda CBR600RR 07-12" maxLength={200} />
