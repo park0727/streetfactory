@@ -15,7 +15,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <Sidebar user={user} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader user={user} />
-        <main className="flex-1 px-4 py-4 pb-20 md:px-6 md:py-6 md:pb-6">{children}</main>
+        <main className="flex-1 px-4 pt-5 pb-24 md:px-8 md:pt-7 md:pb-10">
+          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+        </main>
         <MobileTabs />
       </div>
     </div>

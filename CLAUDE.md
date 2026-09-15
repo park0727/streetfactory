@@ -34,6 +34,7 @@ npm run deploy       # Cloudflare 배포 (wrangler login 필요)
 - 프로덕션 비밀값은 `wrangler secret put` 으로 등록한다. `src/proxy.ts` 와 `src/lib/env.ts` 에서는 비밀값을 참조하지 않는다 (미들웨어는 빌드 시 인라인됨).
 
 ## 반드시 지킬 규칙
+- **DB 풀 `max` 는 1 로 두지 않는다** (현재 5). 트랜잭션 풀러에 연결 1개로 동시 쿼리를 보내면 응답이 영구히 멈춘다. 페이지 하나에서 `Promise.all` 로 동시에 보내는 쿼리는 5개 이하.
 - **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.
 - **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외).
 - 판매 라인 `unit_price`/`unit_cost` 는 스냅샷이다. 마스터 변경으로 소급 수정하지 않는다.

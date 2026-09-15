@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-barlow);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -128,41 +128,71 @@
     @apply font-sans;
   }
 }
-/* ---------- Streetfactory 테마: 비즈니스 네이비 & 슬레이트 ---------- */
+/* ---------- Streetfactory 테마: 산업용 네이비 & 슬레이트 (docs/DESIGN.md) ---------- */
 :root {
-  --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.22 0.03 262);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.03 262);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.03 262);
-  --primary: oklch(0.32 0.09 262);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.95 0.008 250);
-  --secondary-foreground: oklch(0.3 0.04 262);
-  --muted: oklch(0.955 0.006 250);
-  --muted-foreground: oklch(0.5 0.02 260);
-  --accent: oklch(0.94 0.014 255);
-  --accent-foreground: oklch(0.28 0.06 262);
-  --destructive: oklch(0.55 0.2 27);
-  --border: oklch(0.9 0.01 255);
-  --input: oklch(0.9 0.01 255);
-  --ring: oklch(0.55 0.12 255);
-  --chart-1: oklch(0.32 0.09 262);
-  --chart-2: oklch(0.6 0.14 245);
-  --chart-3: oklch(0.7 0.12 190);
-  --chart-4: oklch(0.78 0.15 75);
-  --chart-5: oklch(0.6 0.02 260);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.24 0.06 262);
-  --sidebar-foreground: oklch(0.9 0.01 255);
-  --sidebar-primary: oklch(0.65 0.14 245);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.31 0.07 262);
-  --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-border: oklch(0.33 0.06 262);
-  --sidebar-ring: oklch(0.65 0.14 245);
+  --background: #f4f6f9;
+  --foreground: #0e1729;
+  --card: #ffffff;
+  --card-foreground: #0e1729;
+  --popover: #ffffff;
+  --popover-foreground: #0e1729;
+  --primary: #1d3260;
+  --primary-foreground: #ffffff;
+  --secondary: #e9edf3;
+  --secondary-foreground: #24344f;
+  --muted: #eef1f5;
+  --muted-foreground: #5b6b82;
+  --accent: #e9edf3;
+  --accent-foreground: #16243d;
+  --destructive: #c62828;
+  --border: #dce2ea;
+  --input: #cfd7e2;
+  --ring: #3b6be0;
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #8a97ab;
+  --radius: 0.375rem;
+  --sidebar: #16243d;
+  --sidebar-foreground: #d6deea;
+  --sidebar-primary: #f26b1d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #223454;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2a3d5f;
+  --sidebar-ring: #f26b1d;
+
+  /* 프로젝트 전용 토큰 */
+  --signal: #f26b1d;
+  --steel: #5b6b82;
+  --status-ok: #1e8e4b;
+  --status-warn: #b45309;
+  --status-critical: #c62828;
+  --font-display: var(--font-barlow);
 }
+
+@theme inline {
+  --color-signal: var(--signal);
+  --color-steel: var(--steel);
+  --color-status-ok: var(--status-ok);
+  --color-status-warn: var(--status-warn);
+  --color-status-critical: var(--status-critical);
+  --font-display: var(--font-barlow);
+}
+
+body { background: var(--background); }
 
 /* 숫자 컬럼 */
 .tabular { font-variant-numeric: tabular-nums; }
+/* 코드·전표번호 */
+.code { font-family: var(--font-geist-mono), ui-monospace, monospace; font-weight: 500; letter-spacing: 0.01em; }
+/* 표 헤더 라벨 */
+.th-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--steel); }
+/* 안전 표식 빗금 (로그인 패널 하단 등 한 곳에만) */
+.hatch {
+  background-image: repeating-linear-gradient(135deg, rgba(242, 107, 29, 0.85) 0 14px, transparent 14px 28px);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

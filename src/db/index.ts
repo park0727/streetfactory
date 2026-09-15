@@ -3,36 +3,24 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 /**
- * Cloudflare Workers + Supavisor(트랜잭션 풀러) 용 클라이언트.
+ * Supabase Supavisor(트랜잭션 풀러, 6543) 용 postgres.js 클라이언트.
  * - prepare: false — 트랜잭션 풀러는 prepared statement 를 지원하지 않는다.
- * - max: 1 — Worker 인스턴스 하나당 연결 하나면 충분하다.
- * - 첫 사용 시점에 연결을 만든다. 빌드(페이지 데이터 수집) 단계에는 DATABASE_URL 이 없기 때문이다.
+ * - max: 5 — **1 로 두면 안 된다.** 연결 1개에 쿼리를 파이프라이닝하면 풀러가 응답을 멈춘다
+ *   (레이아웃 + 페이지가 동시에 쿼리하는 Next 구조에서 항상 발생). 5 는 Workers 의 동시 소켓 한도(6) 안이다.
+ * - 페이지에서 Promise.all 로 동시에 보내는 쿼리는 5개 이하로 유지한다.
+ * - postgres.js 는 첫 쿼리 때 접속하므로 빌드 단계에서는 접속하지 않는다.
  */
 function createDb() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL 이 설정되지 않았습니다.");
-  const client = postgres(url, { prepare: false, max: 1, idle_timeout: 20, connect_timeout: 10 });
+  const url = process.env.DATABASE_URL ?? "postgres://missing:missing@localhost:1/missing";
+  const client = postgres(url, { prepare: false, max: 5, idle_timeout: 20, connect_timeout: 10 });
   return drizzle(client, { schema });
 }
 
-type Db = ReturnType<typeof createDb>;
+export type Db = ReturnType<typeof createDb>;
 
 // next dev 의 HMR 에서 연결이 계속 늘어나는 것을 막기 위해 전역에 캐시한다.
 const globalForDb = globalThis as unknown as { __db?: Db };
+export const db: Db = globalForDb.__db ?? createDb();
+if (process.env.NODE_ENV !== "production") globalForDb.__db = db;
 
-function getDb(): Db {
-  if (!globalForDb.__db) globalForDb.__db = createDb();
-  return globalForDb.__db;
-}
-
-/** 지연 초기화 프록시. `db.select()` 처럼 기존 방식 그대로 쓴다. */
-export const db: Db = new Proxy({} as Db, {
-  get(_t, prop) {
-    const real = getDb() as unknown as Record<PropertyKey, unknown>;
-    const v = real[prop];
-    return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(real) : v;
-  },
-});
-
-export type { Db };
 export { schema };
