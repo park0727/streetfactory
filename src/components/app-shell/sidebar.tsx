@@ -49,10 +49,10 @@ function NavList({ user, onNavigate }: Props & { onNavigate?: () => void }) {
 function UserBox({ user }: Props) {
   return (
     <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-4 py-3">
-      <div className="min-w-0">
+      <Link href="/settings/profile" className="min-w-0 rounded-md hover:underline">
         <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
-        <p className="text-xs text-sidebar-foreground/60">{user.role === "admin" ? "관리자" : "직원"}</p>
-      </div>
+        <p className="text-xs text-sidebar-foreground/60">{user.role === "admin" ? "관리자" : "직원"} · 내 정보</p>
+      </Link>
       <form action={logoutAction}>
         <Button variant="ghost" size="icon" className="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground" title="로그아웃">
           <LogOut className="size-4" />

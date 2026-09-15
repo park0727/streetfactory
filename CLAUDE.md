@@ -20,7 +20,13 @@ npm run db:generate  # 스키마 변경 → drizzle/ 마이그레이션 생성
 npm run db:migrate   # DIRECT_URL(5432) 로 마이그레이션 적용
 npm run preview      # Workers 런타임으로 로컬 실행 (.dev.vars 필요)
 npm run deploy       # Cloudflare 배포
+node --env-file=.env.local scripts/create-admin.mjs <email> [이름]   # 첫 관리자 생성
 ```
+
+## 로컬 DB 검증
+로컬 Postgres 16 이 떠 있으면 `createdb streetfactory_test` 후 `auth.users` 스텁 테이블을 만들고
+`DIRECT_URL=postgresql://localhost:5432/streetfactory_test npx drizzle-kit migrate` 로 SQL 을 검증할 수 있다.
+인증은 Supabase 전용이라 화면 E2E 는 실제 Supabase 프로젝트가 필요하다.
 
 ## 반드시 지킬 규칙
 - **재고는 `stock_movements` 만이 원천**이다. 재고 수량 컬럼을 parts 에 추가하지 않는다. 현재재고는 `v_stock`/`v_inventory` 뷰로 읽는다.
@@ -41,10 +47,18 @@ src/app/(app)/…            로그인 필요 화면 (docs/SCREENS.md)
 src/db/schema.ts           Drizzle 스키마
 src/db/index.ts            DB 클라이언트
 src/lib/supabase/          server / client / admin 클라이언트
-src/lib/auth.ts            현재 사용자·권한 헬퍼
+src/lib/auth.ts            현재 사용자·권한 헬퍼 (requireUser / requireAdmin / requireModule)
+src/lib/action-result.ts   Server Action 반환 타입, zod/DB 오류 메시지
+src/hooks/use-action-toast.ts  useActionState 결과 → 토스트
+src/components/confirm-button.tsx  확인 대화상자 + 서버 액션 버튼
 src/proxy.ts               세션 갱신 + 비로그인 리다이렉트
 drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수·RLS)
 ```
+
+## 패턴
+- 화면 = `page.tsx`(RSC, 조회) + `actions.ts`("use server", zod 검증, revalidatePath) + 클라이언트 표/폼 컴포넌트.
+- 폼은 `useActionState` + `useActionToast`. 삭제·비활성화는 `ConfirmButton` 에 바인딩된 액션을 넘긴다.
+- 참고 구현: `src/app/(app)/settings/master`, `src/app/(app)/settings/users`.
 
 ## UI 규칙
 숫자 우측 정렬, `₩#,##0`, 상태 뱃지 색(정상 green / 부족 amber / 품절 red), 표 헤더 sticky, 모바일 반응형 필수.

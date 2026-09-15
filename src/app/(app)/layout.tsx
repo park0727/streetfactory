@@ -1,8 +1,14 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { Sidebar, MobileHeader, MobileTabs } from "@/components/app-shell/sidebar";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const profile = await requireUser();
+  if (profile.mustChangePassword) {
+    const pathname = (await headers()).get("x-pathname") ?? "";
+    if (!pathname.startsWith("/settings/profile")) redirect("/settings/profile");
+  }
   const user = { name: profile.name, role: profile.role };
   return (
     <div className="flex min-h-svh">

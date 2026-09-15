@@ -8,6 +8,8 @@ const PUBLIC_PATHS = ["/login"];
  * 권한(role/module) 검사는 여기서 하지 않고 각 페이지/액션에서 profiles 를 읽어 수행한다.
  */
 export async function proxy(request: NextRequest) {
+  // 레이아웃에서 현재 경로를 알 수 있게 헤더로 전달한다 (강제 비밀번호 변경 리다이렉트용).
+  request.headers.set("x-pathname", request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
