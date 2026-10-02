@@ -19,7 +19,7 @@ export function ExportButton() {
         filename: `부품마스터_${new Date().toISOString().slice(0, 10)}.xlsx`,
         sheetName: "부품마스터",
         columns: [...PART_COLUMNS.filter((c) => !c.importOnly), { header: "평균원가", key: "avgCost", width: 12, numFmt: "#,##0" }],
-        rows: rows.map((r) => ({ ...r, status: PART_STATUS[r.status as PartStatus] ?? r.status })),
+        rows: rows.map((r) => ({ ...r, status: PART_STATUS[r.status as PartStatus] ?? r.status, online: r.online ? "Y" : "N" })),
       });
       toast.success(`${rows.length}건을 내려받았습니다.`);
     } catch (e) {

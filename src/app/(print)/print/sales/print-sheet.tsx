@@ -26,8 +26,10 @@ export type PrintDoc = {
  * A4 출고증 / 거래명세서. 원가·이익은 절대 싣지 않는다.
  * 기본은 단가 없는 '출고증'(배송 확인용), 체크하면 단가·금액이 들어간 '거래명세서'.
  */
-export function PrintSheet({ docs }: { docs: PrintDoc[] }) {
-  const [withPrice, setWithPrice] = useState(false);
+export type Sender = { companyName: string; ceoName: string | null; bizNo: string | null; mailOrderNo: string | null; phone: string | null; address: string | null };
+
+export function PrintSheet({ docs, sender, defaultWithPrice = false, allowToggle = true }: { docs: PrintDoc[]; sender?: Sender | null; defaultWithPrice?: boolean; allowToggle?: boolean }) {
+  const [withPrice, setWithPrice] = useState(defaultWithPrice);
   const title = withPrice ? "거래명세서" : "출고증";
   return (
     <>
@@ -46,10 +48,12 @@ export function PrintSheet({ docs }: { docs: PrintDoc[] }) {
 
       <div className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b bg-white/95 px-5 py-3 text-sm backdrop-blur">
         <span className="font-semibold">{title} {docs.length}건</span>
-        <label className="flex items-center gap-1.5">
-          <input type="checkbox" className="accent-black" checked={withPrice} onChange={(e) => setWithPrice(e.target.checked)} /> 단가·금액 표시 (거래명세서)
-        </label>
-        <span className="text-xs text-neutral-500">전표당 A4 한 장. 원가와 이익은 인쇄되지 않습니다.</span>
+        {allowToggle && (
+          <label className="flex items-center gap-1.5">
+            <input type="checkbox" className="accent-black" checked={withPrice} onChange={(e) => setWithPrice(e.target.checked)} /> 단가·금액 표시 (거래명세서)
+          </label>
+        )}
+        <span className="text-xs text-neutral-500">{allowToggle ? "전표당 A4 한 장. 원가와 이익은 인쇄되지 않습니다." : "인쇄 버튼을 누르면 종이로 출력하거나 PDF로 저장할 수 있습니다."}</span>
         <div className="ml-auto flex gap-2">
           <Button size="sm" onClick={() => window.print()}>
             <Printer /> 인쇄
@@ -92,8 +96,13 @@ export function PrintSheet({ docs }: { docs: PrintDoc[] }) {
                 </div>
                 <div>
                   <p className="mb-1 text-[11px] font-semibold text-neutral-500">보내는 곳</p>
-                  <p className="text-[15px] font-bold">Streetfactory</p>
-                  <p className="text-neutral-600">오토바이 수리 · 수입 부품</p>
+                  <p className="text-[15px] font-bold">{sender?.companyName || "Streetfactory"}</p>
+                  {sender?.ceoName && <p>대표 {sender.ceoName}</p>}
+                  {sender?.bizNo && <p>사업자번호 {bizNo(sender.bizNo)}</p>}
+                  {sender?.mailOrderNo && <p>통신판매업 {sender.mailOrderNo}</p>}
+                  {sender?.phone && <p>{sender.phone}</p>}
+                  {sender?.address && <p>{sender.address}</p>}
+                  {!sender?.bizNo && !sender?.address && <p className="text-neutral-600">오토바이 수리 · 수입 부품</p>}
                   {withPrice && d.dueDate && <p className="mt-1">결제 예정일 {d.dueDate}</p>}
                 </div>
               </div>

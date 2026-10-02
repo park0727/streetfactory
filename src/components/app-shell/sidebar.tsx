@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu, UserRound } from "lucide-react";
@@ -10,13 +10,13 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/lib/auth-actions";
 
-type Props = { user: { name: string; role: "admin" | "staff" } };
+type Props = { user: { name: string; role: "admin" | "staff" }; badges?: Record<string, number> };
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-function NavList({ user, onNavigate }: Props & { onNavigate?: () => void }) {
+function NavList({ user, badges, onNavigate }: Props & { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
@@ -42,6 +42,7 @@ function NavList({ user, onNavigate }: Props & { onNavigate?: () => void }) {
                       {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-sm bg-signal" />}
                       <i.icon className="size-4 shrink-0 opacity-80" strokeWidth={1.75} />
                       {i.label}
+                      {(badges?.[i.href] ?? 0) > 0 && <span className="ml-auto rounded-full bg-signal px-1.5 text-[11px] font-semibold leading-5 text-white">{badges![i.href]}</span>}
                     </Link>
                   </li>
                 );
@@ -84,23 +85,24 @@ function UserBox({ user, onNavigate }: Props & { onNavigate?: () => void }) {
   );
 }
 
-export function Sidebar({ user }: Props) {
+export function Sidebar({ user, badges }: Props) {
   return (
     <aside className="sticky top-0 hidden h-svh w-[232px] shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
       <div className="px-6 pt-6 pb-1">
         <Brand className="text-white" />
       </div>
-      <NavList user={user} />
+      <NavList user={user} badges={badges} />
       <UserBox user={user} />
     </aside>
   );
 }
 
-export function MobileHeader({ user }: Props) {
-  const [open, setOpen] = useState(false);
+export function MobileHeader({ user, badges }: Props) {
   const pathname = usePathname();
-  // 경로가 바뀌면(링크 이동, 뒤로가기 포함) 드로어를 닫는다
-  useEffect(() => setOpen(false), [pathname]);
+  // 드로어를 연 경로를 기억한다. 경로가 바뀌면(링크 이동, 뒤로가기 포함) 자동으로 닫힌 상태가 된다.
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const open = openedAt === pathname;
+  const setOpen = (o: boolean) => setOpenedAt(o ? pathname : null);
   return (
     <header
       className="sticky z-30 flex h-12 items-center gap-1 bg-sidebar px-2 text-sidebar-foreground md:hidden"
@@ -108,15 +110,16 @@ export function MobileHeader({ user }: Props) {
     >
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="text-white hover:bg-sidebar-accent" aria-label="메뉴 열기">
+          <Button variant="ghost" size="icon" className="relative text-white hover:bg-sidebar-accent" aria-label="메뉴 열기">
             <Menu className="size-5" />
+            {Object.values(badges ?? {}).some((n) => n > 0) && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-signal" />}
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex w-[280px] flex-col gap-0 bg-sidebar p-0 text-sidebar-foreground">
           <SheetTitle className="px-6 pt-6 pb-1">
             <Brand className="text-white" />
           </SheetTitle>
-          <NavList user={user} onNavigate={() => setOpen(false)} />
+          <NavList user={user} badges={badges} onNavigate={() => setOpen(false)} />
           <UserBox user={user} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>

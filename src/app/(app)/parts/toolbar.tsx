@@ -11,7 +11,7 @@ type Props = { cats: { id: number; name: string }[]; manufacturers: string[] };
 export function PartsToolbar({ cats, manufacturers }: Props) {
   const { get, set } = useUrlFilters();
   const [q, setQ] = useDebouncedParam("q");
-  const hasFilter = !!(get("q") || get("cat") || get("mfr") || get("status"));
+  const hasFilter = !!(get("q") || get("cat") || get("mfr") || get("status") || get("online"));
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -65,8 +65,18 @@ export function PartsToolbar({ cats, manufacturers }: Props) {
           ))}
         </SelectContent>
       </Select>
+      <Select value={get("online") || "all"} onValueChange={(v) => set({ online: v })}>
+        <SelectTrigger className="w-[150px] bg-card" aria-label="온라인 판매">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">온라인 판매 전체</SelectItem>
+          <SelectItem value="1">주문 화면 노출</SelectItem>
+          <SelectItem value="0">노출 안 함</SelectItem>
+        </SelectContent>
+      </Select>
       {hasFilter && (
-        <Button variant="ghost" size="sm" onClick={() => { setQ(""); set({ q: null, cat: null, mfr: null, status: null }); }}>
+        <Button variant="ghost" size="sm" onClick={() => { setQ(""); set({ q: null, cat: null, mfr: null, status: null, online: null }); }}>
           <X /> 초기화
         </Button>
       )}

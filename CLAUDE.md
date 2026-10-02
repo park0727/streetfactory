@@ -85,7 +85,14 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 - 엑셀 다운로드 = `/<route>/export` 라우트 핸들러(JSON) + 클라이언트 `downloadXlsx`. 업로드 = 클라이언트 `readXlsx` → 서버 검증 액션 → 미리보기 → 저장 액션.
 - 화면 검증: 로컬 Postgres `streetfactory_test` 에 `scripts/seed-sample.mjs` 로 샘플을 넣고 `DATABASE_URL=postgresql://localhost:5432/streetfactory_test npm run dev` 로 띄운다. 운영 DB 에는 샘플을 넣지 않는다.
 
+## 거래처 주문 화면 (`src/app/shop`)
+- 고객 인증은 `src/lib/shop.ts` 의 `getCustomer` / `requireCustomer`. 직원 헬퍼(`requireUser`)와 섞지 않는다. 고객 데이터 조회는 항상 `partnerId = me.partnerId` 로 제한한다.
+- 고객에게 재고 수량·원가를 절대 내려보내지 않는다. 표시는 `availability()` 의 3단계만.
+- 가격은 `src/lib/pricing.ts` 의 `priceFor` 하나로 계산한다.
+- 판매 전표 생성은 `src/app/(app)/entry/sale-core.ts` 의 `insertSale` 을 공유한다 (출고 등록·온라인 주문 출고).
+
 ## UI 규칙
+- **문구는 컴퓨터에 익숙하지 않은 일반인 기준.** 경로(`/shop`)나 기술 용어로 안내하지 말고, 이동이 필요하면 버튼을 준다.
 숫자 우측 정렬, `₩#,##0`, 상태 뱃지 색(정상 green / 부족 amber / 품절 red), 표 헤더 sticky, 모바일 반응형 필수.
 
 <!-- BEGIN:nextjs-agent-rules -->

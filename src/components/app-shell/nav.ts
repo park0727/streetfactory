@@ -9,6 +9,8 @@ import {
   Ship,
   Users,
   Settings2,
+  ShoppingBag,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +23,7 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/", label: "대시보드", icon: LayoutDashboard },
       { href: "/entry", label: "입출고 등록", icon: ArrowLeftRight },
+      { href: "/orders", label: "온라인 주문", icon: ShoppingBag },
       { href: "/inventory", label: "재고 현황", icon: Boxes },
       { href: "/parts", label: "부품 마스터", icon: Package },
       { href: "/partners", label: "거래처", icon: Building2 },
@@ -39,6 +42,7 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/settings/users", label: "사용자 관리", icon: Users, adminOnly: true },
       { href: "/settings/master", label: "기준 데이터", icon: Settings2 },
+      { href: "/settings/shop", label: "주문 화면 설정", icon: Store, adminOnly: true },
     ],
   },
 ];

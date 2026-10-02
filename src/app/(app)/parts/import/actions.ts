@@ -7,7 +7,7 @@ import { categories, parts, stockMovements, suppliers } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import type { ActionResult } from "@/lib/action-result";
 import { PART_STATUS_FROM_LABEL } from "@/lib/parts-shared";
-import { partSchema } from "../schema";
+import { partSchema, yes } from "../schema";
 import { PART_COLUMNS, type ImportRow, type RowResult, type ValidateResult } from "./columns";
 
 const MAX_ROWS = 2000;
@@ -27,6 +27,8 @@ function parseRows(rows: ImportRow[]) {
     }
     const statusLabel = typeof obj.status === "string" ? obj.status.trim() : "";
     if (statusLabel) obj.status = PART_STATUS_FROM_LABEL[statusLabel] ?? (["active", "paused", "discontinued"].includes(statusLabel) ? statusLabel : "__bad__");
+    // 온라인판매 열이 비어 있으면 기존 값 유지(신규는 미노출)
+    if (obj.online !== undefined) obj.online = yes(obj.online);
     const category = String(obj.category ?? "").trim();
     const supplier = obj.supplier ? String(obj.supplier).trim() : undefined;
     const r = partSchema.safeParse({ ...obj, categoryId: 1 }); // categoryId 는 뒤에서 이름으로 치환
@@ -147,6 +149,8 @@ export async function commitPartsImport(rows: ImportRow[]): Promise<ActionResult
         supplierId: p.supplier ? (supMap.get(p.supplier) ?? null) : null,
         standardCost: d.standardCost,
         retailPrice: d.retailPrice,
+        wholesalePrice: d.wholesalePrice,
+        ...(d.online !== undefined ? { online: d.online } : {}),
         safetyStock: d.safetyStock,
         status: d.status,
         memo: d.memo ?? null,

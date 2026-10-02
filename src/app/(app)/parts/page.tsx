@@ -9,7 +9,7 @@ import { PageHeader, Panel } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
 import { PartsToolbar } from "./toolbar";
-import { PartsTable, NewPartButton } from "./parts-table";
+import { PartsTable, NewPartButton, BulkOnline } from "./parts-table";
 import { ExportButton } from "./export-button";
 
 export const metadata = { title: "부품 마스터" };
@@ -21,6 +21,7 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
   const cat = int(sp, "cat", 0);
   const mfr = str(sp, "mfr");
   const status = str(sp, "status");
+  const online = str(sp, "online"); // 1 | 0
   const page = int(sp, "page", 1);
 
   const conds: SQL[] = [];
@@ -28,6 +29,8 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
   if (cat) conds.push(eq(parts.categoryId, cat));
   if (mfr) conds.push(eq(parts.manufacturer, mfr));
   if (status === "active" || status === "paused" || status === "discontinued") conds.push(eq(parts.status, status));
+  if (online === "1") conds.push(eq(parts.online, true));
+  else if (online === "0") conds.push(eq(parts.online, false));
   const where = conds.length ? and(...conds) : undefined;
 
   const [rows, [{ total }], cats, sups, mfrs] = await Promise.all([
@@ -45,6 +48,8 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
         supplierName: suppliers.name,
         standardCost: parts.standardCost,
         retailPrice: parts.retailPrice,
+        wholesalePrice: parts.wholesalePrice,
+        online: parts.online,
         avgCost: parts.avgCost,
         safetyStock: parts.safetyStock,
         status: parts.status,
@@ -90,6 +95,9 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
         }
       />
       <PartsToolbar cats={cats} manufacturers={manufacturers} />
+      <div className="mt-2">
+        <BulkOnline ids={rows.filter((r) => r.status !== "discontinued").map((r) => r.id)} />
+      </div>
       <Panel className="mt-3 overflow-hidden">
         <PartsTable rows={rows} cats={cats} sups={sups} />
         <div className="border-t px-4 py-2.5">

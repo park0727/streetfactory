@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, parts, stockMovements } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
@@ -34,6 +34,8 @@ export async function savePart(_: unknown, fd: FormData): Promise<ActionResult> 
     supplierId: v.supplierId ?? null,
     standardCost: v.standardCost,
     retailPrice: v.retailPrice,
+    wholesalePrice: v.wholesalePrice,
+    online: v.online ?? false,
     safetyStock: v.safetyStock,
     status: v.status,
     memo: v.memo ?? null,
@@ -69,6 +71,7 @@ export async function savePart(_: unknown, fd: FormData): Promise<ActionResult> 
   }
   revalidatePath("/parts");
   revalidatePath("/inventory");
+  revalidatePath("/shop");
   if (newCategory) revalidatePath("/settings/master");
   return { ok: true, message: id ? "부품 정보를 수정했습니다." : `${v.code} 를 등록했습니다.` };
 }
@@ -78,4 +81,24 @@ export async function setPartStatus(id: number, status: "active" | "paused" | "d
   await db.update(parts).set({ status }).where(eq(parts.id, id));
   revalidatePath("/parts");
   return { ok: true, message: "운영상태를 바꿨습니다." };
+}
+
+/** 목록에서 온라인 판매 노출을 바로 켜고 끈다 */
+export async function setPartOnline(id: number, online: boolean): Promise<ActionResult> {
+  await requireModule("parts");
+  await db.update(parts).set({ online }).where(eq(parts.id, id));
+  revalidatePath("/parts");
+  revalidatePath("/shop");
+  return { ok: true, message: online ? "주문 화면에 노출합니다." : "주문 화면에서 숨겼습니다." };
+}
+
+/** 검색된 여러 부품의 온라인 판매를 한 번에 */
+export async function setPartsOnline(ids: number[], online: boolean): Promise<ActionResult> {
+  await requireModule("parts");
+  const clean = ids.filter((n) => Number.isInteger(n) && n > 0).slice(0, 500);
+  if (clean.length === 0) return { ok: false, error: "선택된 부품이 없습니다." };
+  await db.update(parts).set({ online }).where(inArray(parts.id, clean));
+  revalidatePath("/parts");
+  revalidatePath("/shop");
+  return { ok: true, message: `${clean.length}개 부품을 ${online ? "주문 화면에 노출" : "주문 화면에서 숨김"} 처리했습니다.` };
 }

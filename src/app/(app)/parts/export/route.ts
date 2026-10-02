@@ -19,6 +19,8 @@ export async function GET() {
       supplier: suppliers.name,
       standardCost: parts.standardCost,
       retailPrice: parts.retailPrice,
+      wholesalePrice: parts.wholesalePrice,
+      online: parts.online,
       avgCost: parts.avgCost,
       safetyStock: parts.safetyStock,
       status: parts.status,

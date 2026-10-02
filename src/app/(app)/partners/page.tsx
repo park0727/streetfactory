@@ -1,6 +1,6 @@
 import { asc, desc, eq, ilike, or, sql, type SQL, and } from "drizzle-orm";
 import { db } from "@/db";
-import { partners, vPartnerStats, vSalesSettlement } from "@/db/schema";
+import { customerAccounts, partners, vPartnerStats, vSalesSettlement } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { str } from "@/lib/query-params";
 import { PageHeader, Panel } from "@/components/page-header";
@@ -34,6 +34,8 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
       bizNo: partners.bizNo,
       defaultTerms: partners.defaultTerms,
       defaultVat: partners.defaultVat,
+      priceTier: partners.priceTier,
+      discountRate: partners.discountRate,
       contactName: partners.contactName,
       phone: partners.phone,
       email: partners.email,
@@ -51,12 +53,16 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(sql`coalesce(${vPartnerStats.totalAmount}, 0)`), asc(partners.name));
 
+  const accounts = await db
+    .select({ id: customerAccounts.id, partnerId: customerAccounts.partnerId, name: customerAccounts.name, email: customerAccounts.email, isActive: customerAccounts.isActive, mustChangePassword: customerAccounts.mustChangePassword })
+    .from(customerAccounts)
+    .orderBy(asc(customerAccounts.createdAt));
   return (
     <>
       <PageHeader title="거래처" description="국내 대리점·정비센터·직영점·온라인몰. 실적은 판매 원장에서 자동 집계됩니다." actions={<NewPartnerButton />} />
       <PartnersToolbar />
       <Panel className="mt-3 overflow-hidden">
-        <PartnersTable rows={rows} />
+        <PartnersTable rows={rows} accounts={accounts} />
       </Panel>
     </>
   );

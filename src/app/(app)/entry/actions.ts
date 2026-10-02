@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/auth";
 import { firstIssue, type ActionResult } from "@/lib/action-result";
 import { saleSchema, inboundSchema, type SaleInput, type InboundInput } from "./schema";
+import { insertSale, nextDocNo } from "./sale-core";
 
 export type PartHit = {
   id: number;
@@ -49,12 +50,7 @@ export async function searchParts(q: string, opts?: { includeDiscontinued?: bool
   return rows;
 }
 
-async function nextDocNo(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], prefix: string, date: string) {
-  const year = Number(date.slice(0, 4));
-  const r = await tx.execute(sql`select public.fn_next_seq(${prefix}, ${year}) as n`);
-  const n = Number((r as unknown as { n: number }[])[0]?.n ?? (r as unknown as { rows?: { n: number }[] }).rows?.[0]?.n);
-  return `${prefix}-${year}-${String(n).padStart(5, "0")}`;
-}
+
 
 /** 재고 검사. editingOrderId 가 있으면 그 전표가 이미 차감한 수량은 가용재고로 되돌려 계산한다. */
 async function checkStock(d: SaleInput, role: string, editingOrderId?: number): Promise<string | null> {
@@ -84,33 +80,7 @@ export async function createSale(input: SaleInput): Promise<ActionResult<{ docNo
   const stockError = await checkStock(d, me.role);
   if (stockError) return { ok: false, error: stockError };
 
-  const docNo = await db.transaction(async (tx) => {
-    const docNo = await nextDocNo(tx, "SLS", d.docDate);
-    const [o] = await tx
-      .insert(salesOrders)
-      .values({
-        docNo,
-        docDate: d.docDate,
-        partnerId: d.partnerId,
-        channel: d.channel ?? null,
-        memo: d.memo ?? null,
-        vatApplied: d.vatApplied,
-        taxInvoiceIssued: d.taxInvoiceIssued,
-        taxInvoiceDate: d.taxInvoiceIssued ? d.docDate : null,
-        dueDate: d.terms === "credit" ? (d.dueDate ?? null) : null,
-        createdBy: me.id,
-      })
-      .returning({ id: salesOrders.id });
-    await tx.insert(salesLines).values(d.lines.map((l, i) => ({ orderId: o.id, lineNo: i + 1, partId: l.partId, qty: l.qty, unitPrice: Math.round(l.unitPrice), unitCost: 0 })));
-    await tx.execute(sql`select public.fn_post_sale(${o.id})`);
-    // 즉시 결제: 총액(부가세 반영)을 출고일에 수금 처리
-    if (d.terms === "immediate") {
-      const supply = d.lines.reduce((a, l) => a + l.qty * Math.round(l.unitPrice), 0);
-      const total = d.vatApplied ? Math.round(supply * 1.1) : supply;
-      if (total > 0) await tx.insert(payments).values({ salesOrderId: o.id, partnerId: d.partnerId, paidAt: d.docDate, amount: total, method: d.method, memo: "출고 시 즉시 결제", createdBy: me.id });
-    }
-    return docNo;
-  });
+  const { docNo } = await db.transaction((tx) => insertSale(tx, d, me.id));
 
   revalidatePath("/entry");
   revalidatePath("/inventory");

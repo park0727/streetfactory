@@ -43,6 +43,20 @@
       "when": 1789463483953,
       "tag": "0005_vat_default_off",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790917269082,
+      "tag": "0006_shop",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790917269692,
+      "tag": "0007_shop_views",
+      "breakpoints": true
     }
   ]
 }

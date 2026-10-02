@@ -19,6 +19,8 @@ export const partSchema = z.object({
   supplierId: z.coerce.number().int().positive().optional(),
   standardCost: z.coerce.number().min(0, "표준원가는 0 이상").default(0),
   retailPrice: z.coerce.number().min(0, "소비자가는 0 이상").default(0),
+  wholesalePrice: z.coerce.number().min(0, "도매가는 0 이상").default(0),
+  online: z.boolean().optional(), // 주문 화면 노출. 엑셀에 열이 없으면 기존 값 유지
   safetyStock: z.coerce.number().int().min(0, "안전재고는 0 이상").default(0),
   status: z.enum(["active", "paused", "discontinued"]).default("active"),
   memo: z.string().trim().max(500).optional(),
@@ -35,5 +37,9 @@ export const partFormSchema = partSchema.refine((v) => v.categoryId || v.newCate
 export function formToObject(fd: FormData) {
   const raw: Record<string, unknown> = {};
   fd.forEach((v, k) => (raw[k] = v === "" || v === "none" ? undefined : v));
+  raw.online = fd.get("online") === "true"; // 체크 해제 시 값이 실리지 않는다
   return raw;
 }
+
+/** 엑셀의 예/아니오 표기 → boolean */
+export const yes = (v: unknown) => /^(y|yes|예|o|true|1|판매|노출)$/i.test(String(v ?? "").trim());

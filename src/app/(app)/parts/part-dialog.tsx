@@ -21,6 +21,8 @@ export type PartRow = {
   supplierId: number | null;
   standardCost: number;
   retailPrice: number;
+  wholesalePrice: number;
+  online: boolean;
   avgCost: number;
   safetyStock: number;
   status: "active" | "paused" | "discontinued";
@@ -113,6 +115,9 @@ export function PartDialog({ open, onClose, part, cats, sups }: Props) {
             <Field label="권장소비자가 (₩)" htmlFor="p-price" className="sm:col-span-2">
               <Input id="p-price" name="retailPrice" type="number" min={0} step={1} defaultValue={part?.retailPrice ?? ""} className="tabular text-right" />
             </Field>
+            <Field label="도매가 (₩)" htmlFor="p-whole" className="sm:col-span-2" hint="도매 거래처용, 비우면 소비자가">
+              <Input id="p-whole" name="wholesalePrice" type="number" min={0} step={1} defaultValue={part?.wholesalePrice || ""} className="tabular text-right" />
+            </Field>
             <Field label="안전재고" htmlFor="p-safety" className="sm:col-span-1">
               <Input id="p-safety" name="safetyStock" type="number" min={0} step={1} defaultValue={part?.safetyStock ?? 0} className="tabular text-right" />
             </Field>
@@ -140,6 +145,10 @@ export function PartDialog({ open, onClose, part, cats, sups }: Props) {
                 </Field>
               </>
             )}
+            <label className="flex items-center gap-2 self-end pb-2 text-sm sm:col-span-3">
+              <input type="checkbox" name="online" value="true" defaultChecked={part?.online ?? false} className="size-4 accent-primary" />
+              거래처 주문 화면에 노출 (온라인 판매)
+            </label>
             <Field label="메모" htmlFor="p-memo" className="sm:col-span-6">
               <Textarea id="p-memo" name="memo" defaultValue={part?.memo ?? ""} rows={2} maxLength={500} />
             </Field>

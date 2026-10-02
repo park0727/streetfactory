@@ -19,6 +19,8 @@ const schema = z.object({
     .optional(),
   defaultTerms: z.enum(["immediate", "credit"]).default("immediate"),
   defaultVat: z.boolean(),
+  priceTier: z.enum(["retail", "wholesale"]).default("retail"),
+  discountRate: z.coerce.number().min(0, "할인율은 0 이상").max(90, "할인율은 90% 이하").default(0),
   contactName: z.string().trim().max(50).optional(),
   phone: z.string().trim().max(30).optional(),
   email: z.string().trim().max(100).optional(),
@@ -36,7 +38,7 @@ export async function savePartner(_: unknown, fd: FormData): Promise<ActionResul
   const r = schema.safeParse(raw);
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
   const { id, ...v } = r.data;
-  const values = { name: v.name, type: v.type, bizNo: v.bizNo || null, defaultTerms: v.defaultTerms, defaultVat: v.defaultVat, contactName: v.contactName ?? null, phone: v.phone ?? null, email: v.email ?? null, address: v.address ?? null, memo: v.memo ?? null, isActive: v.isActive };
+  const values = { name: v.name, type: v.type, bizNo: v.bizNo || null, defaultTerms: v.defaultTerms, defaultVat: v.defaultVat, priceTier: v.priceTier, discountRate: v.discountRate, contactName: v.contactName ?? null, phone: v.phone ?? null, email: v.email ?? null, address: v.address ?? null, memo: v.memo ?? null, isActive: v.isActive };
   try {
     if (id) await db.update(partners).set(values).where(eq(partners.id, id));
     else {

@@ -16,10 +16,15 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   return profile ?? null;
 });
 
-/** 로그인 + 활성 계정 필수. 아니면 /login 으로. */
+/** 로그인 + 활성 직원 계정 필수. 고객 계정이면 /shop, 그 외에는 /login 으로. */
 export async function requireUser(): Promise<Profile> {
   const p = await getProfile();
-  if (!p || !p.isActive) redirect("/login?reason=inactive");
+  if (!p) {
+    const { getCustomer } = await import("@/lib/shop");
+    if (await getCustomer()) redirect("/shop");
+    redirect("/login?reason=inactive");
+  }
+  if (!p.isActive) redirect("/login?reason=inactive");
   return p;
 }
 

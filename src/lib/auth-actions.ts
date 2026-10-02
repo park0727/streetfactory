@@ -5,7 +5,8 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
-export type LoginState = { error?: string } | undefined;
+/** goto 가 있으면 화면에 이동 버튼을 함께 보여준다 */
+export type LoginState = { error?: string; goto?: { href: string; label: string } } | undefined;
 
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
@@ -18,7 +19,11 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   if (error) return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
   // 임시 비밀번호 상태면 레이아웃의 2차 리다이렉트 없이 바로 변경 화면으로 (빈 화면 방지)
   const [p] = await db.select({ must: profiles.mustChangePassword, active: profiles.isActive }).from(profiles).where(eq(profiles.id, data.user.id));
-  if (p && !p.active) {
+  if (!p) {
+    await supabase.auth.signOut();
+    return { error: "이 계정은 거래처 주문용 계정입니다. 아래 버튼을 눌러 주문 화면에서 로그인해 주세요.", goto: { href: "/shop/login", label: "주문 화면으로 가기" } };
+  }
+  if (!p.active) {
     await supabase.auth.signOut();
     return { error: "비활성화된 계정입니다. 관리자에게 문의하세요." };
   }

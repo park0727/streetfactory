@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/shop/login"];
 
 /**
  * 모든 요청에서 Supabase 세션 쿠키를 갱신하고, 비로그인 사용자는 /login 으로 보낸다.
@@ -33,8 +33,10 @@ export async function proxy(request: NextRequest) {
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    // 고객 주문 화면(/shop)은 고객 로그인으로, 나머지는 직원 로그인으로
+    url.pathname = pathname.startsWith("/shop") ? "/shop/login" : "/login";
+    url.search = "";
+    if (!pathname.startsWith("/shop")) url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
   if (user && pathname === "/login") {
@@ -47,5 +49,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)"],
 };

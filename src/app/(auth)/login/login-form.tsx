@@ -19,9 +19,14 @@ export function LoginForm({ next }: { next: string }) {
         <Input id="password" name="password" type="password" autoComplete="current-password" required className="h-10 text-[15px]" />
       </div>
       {state?.error && (
-        <p role="alert" className="text-sm text-status-critical">
-          {state.error}
-        </p>
+        <div role="alert" className="space-y-2.5 rounded-md border border-status-critical/30 bg-status-critical/5 p-3">
+          <p className="text-sm text-status-critical">{state.error}</p>
+          {state.goto && (
+            <Button asChild variant="outline" className="h-10 w-full bg-card">
+              <a href={state.goto.href}>{state.goto.label} →</a>
+            </Button>
+          )}
+        </div>
       )}
       <Button type="submit" size="lg" className="h-10 w-full text-[15px]" disabled={pending}>
         {pending ? "확인 중…" : "로그인"}

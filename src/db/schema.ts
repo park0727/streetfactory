@@ -38,6 +38,8 @@ export const customsStatus = pgEnum("customs_status", ["pending", "cleared"]);
 export const movementType = pgEnum("movement_type", ["opening", "inbound", "sale", "adjustment"]);
 export const paymentTerms = pgEnum("payment_terms", ["immediate", "credit"]); // 즉시결제 / 외상
 export const paymentMethod = pgEnum("payment_method", ["cash", "transfer", "card", "other"]);
+export const priceTier = pgEnum("price_tier", ["retail", "wholesale"]); // 거래처 기준가: 권장소비자가 / 도매가
+export const webOrderStatus = pgEnum("web_order_status", ["pending", "shipped", "cancelled"]);
 
 // ---------- 공통 컬럼 ----------
 const krw = (name: string) => numeric(name, { precision: 14, scale: 0, mode: "number" });
@@ -97,6 +99,8 @@ export const parts = pgTable(
     supplierId: integer("supplier_id").references(() => suppliers.id),
     standardCost: krw("standard_cost").notNull().default(0), // 표준수입원가 (참고값)
     retailPrice: krw("retail_price").notNull().default(0), // 권장소비자가
+    wholesalePrice: krw("wholesale_price").notNull().default(0), // 도매가 (0 이면 권장소비자가 사용)
+    online: boolean("online").notNull().default(false), // 고객 주문 화면 노출
     avgCost: cost("avg_cost").notNull().default(0), // 이동평균 원가
     safetyStock: integer("safety_stock").notNull().default(0),
     status: partStatus("status").notNull().default("active"),
@@ -116,6 +120,8 @@ export const partners = pgTable("partners", {
   bizNo: text("biz_no"), // 사업자등록번호 (세금계산서용), 숫자 10자리 저장
   defaultTerms: paymentTerms("default_terms").notNull().default("immediate"), // 출고 등록 시 자동 선택
   defaultVat: boolean("default_vat").notNull().default(false), // 부가세 별도 청구(세금계산서) 기본값. 기본 해제
+  priceTier: priceTier("price_tier").notNull().default("retail"), // 온라인 주문 기준가
+  discountRate: numeric("discount_rate", { precision: 5, scale: 2, mode: "number" }).notNull().default(0), // 기준가에서 추가 할인 %
   contactName: text("contact_name"),
   phone: text("phone"),
   email: text("email"),
@@ -253,6 +259,75 @@ export const stockMovements = pgTable(
   (t) => [index("stock_movements_part_idx").on(t.partId), index("stock_movements_date_idx").on(t.occurredAt)],
 );
 
+// ---------- 고객(거래처) 주문 계정 ----------
+export const customerAccounts = pgTable("customer_accounts", {
+  id: uuid("id").primaryKey(), // = auth.users.id
+  partnerId: bigint("partner_id", { mode: "number" })
+    .notNull()
+    .references(() => partners.id),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  mustChangePassword: boolean("must_change_password").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+});
+
+// ---------- 온라인 주문 (접수 → 출고 처리 시 판매 전표 생성) ----------
+export const webOrders = pgTable(
+  "web_orders",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    orderNo: text("order_no").notNull().unique(), // WEB-YYYY-NNNNN
+    partnerId: bigint("partner_id", { mode: "number" })
+      .notNull()
+      .references(() => partners.id),
+    customerId: uuid("customer_id").references(() => customerAccounts.id),
+    status: webOrderStatus("status").notNull().default("pending"),
+    vatApplied: boolean("vat_applied").notNull().default(false), // 주문 시점 거래처 설정 스냅샷
+    memo: text("memo"),
+    cancelReason: text("cancel_reason"),
+    salesOrderId: bigint("sales_order_id", { mode: "number" }).references(() => salesOrders.id, { onDelete: "set null" }),
+    processedBy: uuid("processed_by").references(() => profiles.id),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("web_orders_status_idx").on(t.status, t.createdAt), index("web_orders_partner_idx").on(t.partnerId, t.createdAt)],
+);
+
+export const webOrderLines = pgTable(
+  "web_order_lines",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    orderId: bigint("order_id", { mode: "number" })
+      .notNull()
+      .references(() => webOrders.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    partId: bigint("part_id", { mode: "number" })
+      .notNull()
+      .references(() => parts.id),
+    qty: integer("qty").notNull(),
+    unitPrice: krw("unit_price").notNull(), // 주문 시점 거래처 적용가 스냅샷 (공급가)
+  },
+  (t) => [index("web_order_lines_part_idx").on(t.partId)],
+);
+
+// ---------- 쇼핑 설정 (단일 행 id = 1) ----------
+export const shopSettings = pgTable("shop_settings", {
+  id: integer("id").primaryKey(),
+  companyName: text("company_name").notNull().default("Streetfactory"),
+  ceoName: text("ceo_name"),
+  bizNo: text("biz_no"),
+  mailOrderNo: text("mail_order_no"), // 통신판매업 신고번호
+  phone: text("phone"),
+  address: text("address"),
+  bankName: text("bank_name"),
+  bankAccount: text("bank_account"),
+  bankHolder: text("bank_holder"),
+  orderNotice: text("order_notice"), // 주문 완료 화면 안내문
+  shopNotice: text("shop_notice"), // 상품 화면 상단 공지
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---------- 채번 ----------
 export const docSequences = pgTable(
   "doc_sequences",
@@ -305,6 +380,9 @@ export type InboundOrder = typeof inboundOrders.$inferSelect;
 export type InboundLine = typeof inboundLines.$inferSelect;
 export type StockMovement = typeof stockMovements.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
+export type CustomerAccount = typeof customerAccounts.$inferSelect;
+export type WebOrder = typeof webOrders.$inferSelect;
+export type ShopSettings = typeof shopSettings.$inferSelect;
 
 // sql 은 뷰/함수 정의(drizzle/custom SQL)에서 재사용
 export { sql };
@@ -357,6 +435,14 @@ export const vSalesSettlement = pgView("v_sales_settlement", {
   paid: numeric("paid", { precision: 16, scale: 0, mode: "number" }).notNull(),
   balance: numeric("balance", { precision: 16, scale: 0, mode: "number" }).notNull(),
   payStatus: text("pay_status").$type<"unpaid" | "partial" | "paid">().notNull(),
+}).existing();
+
+/** 주문 가능 재고 = 현재재고 − 접수 대기 중인 온라인 주문 수량 */
+export const vAvailable = pgView("v_available", {
+  partId: bigint("part_id", { mode: "number" }).notNull(),
+  qty: integer("qty").notNull(),
+  reserved: integer("reserved").notNull(),
+  available: integer("available").notNull(),
 }).existing();
 
 export const vPartnerStats = pgView("v_partner_stats", {

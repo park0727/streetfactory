@@ -1,7 +1,9 @@
 "use client";
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { BookOpenText, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookOpenText, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
+import { AccountsDialog, type AccountRow } from "./accounts-dialog";
+import { PRICE_TIER } from "@/lib/pricing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +29,8 @@ export type PartnerRow = {
   bizNo: string | null;
   defaultTerms: "immediate" | "credit";
   defaultVat: boolean;
+  priceTier: "retail" | "wholesale";
+  discountRate: number;
   balance: number;
   contactName: string | null;
   phone: string | null;
@@ -39,8 +43,10 @@ export type PartnerRow = {
   lastDate: string | null;
 };
 
-export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
+export function PartnersTable({ rows, accounts }: { rows: PartnerRow[]; accounts: AccountRow[] }) {
   const [editing, setEditing] = useState<PartnerRow | null>(null);
+  const [acct, setAcct] = useState<PartnerRow | null>(null);
+  const accOf = (id: number) => accounts.filter((a) => a.partnerId === id);
   return (
     <>
       <Table className="text-[13px]">
@@ -56,13 +62,15 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
             <TableHead className="th-label w-[130px] text-right">누적 거래금액</TableHead>
             <TableHead className="th-label w-[110px] text-right">미수 잔액</TableHead>
             <TableHead className="th-label w-[110px]">최근 거래일</TableHead>
+            <TableHead className="th-label w-[110px]">온라인 가격</TableHead>
+            <TableHead className="th-label w-[90px]">주문 계정</TableHead>
             <TableHead className="w-[112px]" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={11} className="p-0">
+              <TableCell colSpan={13} className="p-0">
                 <EmptyState title="거래처가 없습니다" hint="오른쪽 위 '거래처 등록' 으로 추가하세요." />
               </TableCell>
             </TableRow>
@@ -85,6 +93,15 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
               <TableCell className="tabular text-right font-medium">{krw(r.totalAmount)}</TableCell>
               <TableCell className={`tabular text-right ${Number(r.balance) > 0 ? "font-medium text-status-critical" : "text-steel"}`}>{Number(r.balance) > 0 ? krw(r.balance) : "—"}</TableCell>
               <TableCell className="tabular text-steel">{r.lastDate ?? "—"}</TableCell>
+              <TableCell className="text-[12px]">
+                {PRICE_TIER[r.priceTier]}
+                {Number(r.discountRate) > 0 && <span className="text-status-ok"> −{Number(r.discountRate)}%</span>}
+              </TableCell>
+              <TableCell>
+                <Button variant="outline" size="xs" onClick={() => setAcct(r)} disabled={!r.isActive}>
+                  <KeyRound /> {accOf(r.id).filter((a) => a.isActive).length > 0 ? `${accOf(r.id).filter((a) => a.isActive).length}개` : "만들기"}
+                </Button>
+              </TableCell>
               <TableCell className="text-right whitespace-nowrap">
                 <Button variant="ghost" size="icon-sm" asChild title="거래처 원장">
                   <Link href={`/ledger/partners?partner=${r.id}`} aria-label={`${r.name} 원장`}>
@@ -112,6 +129,7 @@ export function PartnersTable({ rows }: { rows: PartnerRow[] }) {
         </TableBody>
       </Table>
       <PartnerDialog open={editing !== null} onClose={() => setEditing(null)} row={editing} />
+      {acct && <AccountsDialog key={acct.id} partner={acct} accounts={accOf(acct.id)} open onClose={() => setAcct(null)} />}
     </>
   );
 }
@@ -162,6 +180,26 @@ function PartnerDialog({ open, onClose, row }: { open: boolean; onClose: () => v
                 </SelectContent>
               </Select>
               <p className="text-[11.5px] text-steel">출고 등록에서 이 거래처를 고르면 자동 선택됩니다.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pt-tier">온라인 주문 기준가</Label>
+              <Select name="priceTier" defaultValue={row?.priceTier ?? "retail"}>
+                <SelectTrigger id="pt-tier" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PRICE_TIER).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pt-disc">추가 할인 (%)</Label>
+              <Input id="pt-disc" name="discountRate" type="number" min={0} max={90} step={0.5} defaultValue={row ? Number(row.discountRate) || "" : ""} placeholder="0" className="tabular text-right" />
+              <p className="text-[11.5px] text-steel">기준가에서 이만큼 깎은 가격이 주문 화면에 보입니다.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pt-bizno">사업자등록번호</Label>
