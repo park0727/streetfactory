@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { shopLogout } from "../../actions";
 import { StatementList } from "./statement-list";
 import { ShopPasswordForm } from "./password-form";
+import { InstallApp } from "../../install-app";
 
 export const metadata = { title: "내 정보" };
 
@@ -70,6 +71,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <ShopPasswordForm forced={me.mustChangePassword} />
       </section>
 
+      <InstallApp />
       <form action={shopLogout}>
         <Button type="submit" variant="outline" className="h-11 w-full">로그아웃</Button>
       </form>

@@ -7,6 +7,7 @@ import { int, str } from "@/lib/query-params";
 import { CatalogFilters } from "./catalog-filters";
 import { ProductRow } from "./product-row";
 import { LoadMore } from "./load-more";
+import { InstallApp } from "../install-app";
 
 export const metadata = { title: "상품" };
 const PAGE = 40;
@@ -54,6 +55,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-3">
+      <InstallApp variant="banner" />
       {settings?.shopNotice && <p className="rounded-md border border-signal/30 bg-signal/5 px-3 py-2 text-[13px] whitespace-pre-line">{settings.shopNotice}</p>}
       <CatalogFilters cats={cats.map((c) => ({ id: c.id, name: c.name }))} />
       <p className="text-[12px] text-steel">

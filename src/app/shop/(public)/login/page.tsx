@@ -5,6 +5,7 @@ import { getCustomer } from "@/lib/shop";
 import { getProfile } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { shopLogout } from "../../actions";
+import { InstallApp } from "../../install-app";
 import { ShopLoginForm } from "./form";
 
 export const metadata = { title: "로그인" };
@@ -39,6 +40,7 @@ export default async function ShopLoginPage() {
           ) : (
             <ShopLoginForm />
           )}
+          <InstallApp className="mt-4" />
           <p className="mt-6 text-xs text-steel">계정이 없거나 비밀번호를 잊었으면 Streetfactory 담당자에게 연락하세요.</p>
           <a href="/login" className="mt-3 inline-block text-xs text-steel underline underline-offset-2">Streetfactory 직원이신가요? 관리자 화면으로</a>
         </div>
