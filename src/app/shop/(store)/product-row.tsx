@@ -28,7 +28,7 @@ type P = {
 
 export function ProductRow({ p }: { p: P }) {
   const { add, items } = useCart();
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(0);
   const inCart = items.find((i) => i.partId === p.partId)?.qty ?? 0;
   const disabled = p.availability === "out";
   return (
@@ -70,15 +70,16 @@ export function ProductRow({ p }: { p: P }) {
       <div className="col-span-2 flex items-center justify-end gap-2">
         {inCart > 0 && <span className="mr-auto text-[12px] text-primary">장바구니에 {inCart}개</span>}
         <div className="flex h-9 items-center rounded-md border bg-card">
-          <button type="button" className="flex size-9 items-center justify-center text-steel disabled:opacity-40" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={disabled || qty <= 1} aria-label="수량 줄이기">
+          <button type="button" className="flex size-9 items-center justify-center text-steel disabled:opacity-40" onClick={() => setQty((q) => Math.max(0, q - 1))} disabled={disabled || qty <= 0} aria-label="수량 줄이기">
             <Minus className="size-4" />
           </button>
           <input
             type="number"
             inputMode="numeric"
-            min={1}
+            min={0}
             value={qty}
-            onChange={(e) => setQty(Math.max(1, Math.min(9999, Number(e.target.value) || 1)))}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => setQty(Math.max(0, Math.min(9999, Number(e.target.value) || 0)))}
             disabled={disabled}
             className="tabular h-9 w-11 border-x bg-transparent text-center text-[14px] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
             aria-label={`${p.code} ${p.name} 수량`}
@@ -89,11 +90,12 @@ export function ProductRow({ p }: { p: P }) {
         </div>
         <Button
           className="h-9"
-          disabled={disabled}
+          disabled={disabled || qty === 0}
+          title={qty === 0 ? "수량을 먼저 정해 주세요" : undefined}
           onClick={() => {
             add({ partId: p.partId, code: p.code, name: p.tireSize ? `${p.tireSize} ${p.name}` : p.name, spec: p.spec, price: p.price }, qty);
             toast.success(`${p.tireSize ?? p.name} ${qty}개를 담았습니다.`, { duration: 1500 });
-            setQty(1);
+            setQty(0);
           }}
         >
           <ShoppingCart /> 담기
