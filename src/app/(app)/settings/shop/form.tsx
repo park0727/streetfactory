@@ -52,7 +52,7 @@ export function ShopSettingsForm({ s }: { s: ShopSettings | null }) {
         <p className="mb-3 text-[14px] font-semibold">회사 정보 (거래명세서·출고증의 &lsquo;보내는 곳&rsquo;)</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <F id="ss-name" label="상호">
-            <Input id="ss-name" name="companyName" defaultValue={s?.companyName ?? "Streetfactory"} required />
+            <Input id="ss-name" name="companyName" defaultValue={s?.companyName ?? "라이더매니아"} required />
           </F>
           <F id="ss-ceo" label="대표자">
             <Input id="ss-ceo" name="ceoName" defaultValue={s?.ceoName ?? ""} />
@@ -63,8 +63,8 @@ export function ShopSettingsForm({ s }: { s: ShopSettings | null }) {
           <F id="ss-mail" label="통신판매업 신고번호">
             <Input id="ss-mail" name="mailOrderNo" defaultValue={s?.mailOrderNo ?? ""} placeholder="2026-서울성동-0000" />
           </F>
-          <F id="ss-phone" label="대표 전화">
-            <Input id="ss-phone" name="phone" defaultValue={s?.phone ?? ""} />
+          <F id="ss-phone" label="문의 전화" hint="주문 화면 위쪽과 주문 완료 화면에 보이고, 누르면 바로 전화가 걸립니다.">
+            <Input id="ss-phone" name="phone" defaultValue={s?.phone ?? ""} placeholder="010-0000-0000" inputMode="tel" />
           </F>
           <F id="ss-addr" label="주소">
             <Input id="ss-addr" name="address" defaultValue={s?.address ?? ""} />

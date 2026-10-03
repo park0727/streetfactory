@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "streetfactory",
+  "name": "ridermania",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-09-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -9,7 +9,7 @@
     "binding": "ASSETS"
   },
   "services": [
-    { "binding": "WORKER_SELF_REFERENCE", "service": "streetfactory" }
+    { "binding": "WORKER_SELF_REFERENCE", "service": "ridermania" }
   ],
   "observability": { "enabled": true },
   // DB(서울) 근처에서 Worker 를 실행하도록 배치 (요청이 먼 PoP 로 들어와도 DB 왕복이 짧아진다)

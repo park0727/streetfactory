@@ -1,7 +1,7 @@
 {
-  "name": "Streetfactory 부품 주문",
-  "short_name": "SF 부품주문",
-  "description": "Streetfactory 거래처 전용 부품 주문",
+  "name": "라이더매니아 부품 주문",
+  "short_name": "라이더매니아",
+  "description": "라이더매니아 거래처 전용 부품 주문",
   "id": "/shop",
   "start_url": "/shop",
   "scope": "/shop",

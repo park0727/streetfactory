@@ -164,7 +164,7 @@ export function InstallApp({ variant = "button", className }: { variant?: "butto
               <li className="flex gap-3">
                 <Step n={3} />
                 <span>
-                  오른쪽 위 <b>&lsquo;추가&rsquo;</b>를 누르면 홈 화면에 <b>SF 부품주문</b> 아이콘이 생깁니다.
+                  오른쪽 위 <b>&lsquo;추가&rsquo;</b>를 누르면 홈 화면에 <b>라이더매니아</b> 아이콘이 생깁니다.
                 </span>
               </li>
               <li className="rounded-md bg-muted px-3 py-2 text-[12.5px] text-steel">공유 버튼이 안 보이면 화면을 살짝 위로 밀어 보세요. 사파리가 아닌 다른 앱이면 사파리로 열어 주세요.</li>

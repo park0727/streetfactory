@@ -42,7 +42,11 @@ function NavList({ user, badges, onNavigate }: Props & { onNavigate?: () => void
                       {active && <span aria-hidden className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-sm bg-signal" />}
                       <i.icon className="size-4 shrink-0 opacity-80" strokeWidth={1.75} />
                       {i.label}
-                      {(badges?.[i.href] ?? 0) > 0 && <span className="ml-auto rounded-full bg-signal px-1.5 text-[11px] font-semibold leading-5 text-white">{badges![i.href]}</span>}
+                      {(badges?.[i.href] ?? 0) > 0 && (
+                        <span className="ml-auto flex items-center gap-1 rounded-full bg-status-critical px-1.5 text-[11px] font-bold leading-5 text-white" aria-label={`새 주문 ${badges![i.href]}건`}>
+                          N <span className="font-semibold">{badges![i.href]}</span>
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
@@ -112,7 +116,7 @@ export function MobileHeader({ user, badges }: Props) {
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="relative text-white hover:bg-sidebar-accent" aria-label="메뉴 열기">
             <Menu className="size-5" />
-            {Object.values(badges ?? {}).some((n) => n > 0) && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-signal" />}
+            {Object.values(badges ?? {}).some((n) => n > 0) && <span aria-hidden className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-status-critical text-[9px] font-bold text-white">N</span>}
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex w-[280px] flex-col gap-0 bg-sidebar p-0 text-sidebar-foreground">

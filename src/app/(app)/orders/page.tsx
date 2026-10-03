@@ -73,9 +73,12 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
             {rows.map((r) => {
               const s = Number(r.supply);
               return (
-                <TableRow key={r.id} className={r.status === "pending" ? "shadow-[inset_3px_0_0_var(--status-warn)]" : ""}>
+                <TableRow key={r.id} className={r.status === "pending" ? "bg-status-critical/[0.03] shadow-[inset_3px_0_0_var(--status-critical)]" : ""}>
                   <TableCell className="code">
-                    <Link href={`/orders/${r.id}`} className="hover:underline">{r.orderNo}</Link>
+                    <Link href={`/orders/${r.id}`} className="inline-flex items-center gap-1.5 hover:underline">
+                      {r.status === "pending" && <span className="flex size-4 items-center justify-center rounded-full bg-status-critical font-sans text-[9px] font-bold text-white" aria-label="새 주문">N</span>}
+                      {r.orderNo}
+                    </Link>
                   </TableCell>
                   <TableCell className="tabular text-steel">{r.createdAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</TableCell>
                   <TableCell className="font-medium">{r.partnerName}</TableCell>

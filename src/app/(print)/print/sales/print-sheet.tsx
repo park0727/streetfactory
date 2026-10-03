@@ -73,7 +73,7 @@ export function PrintSheet({ docs, sender, defaultWithPrice = false, allowToggle
             <section key={d.id} className="sheet mx-auto min-h-[297mm] w-[210mm] bg-white p-[14mm_12mm] shadow-md">
               <header className="mb-5 flex items-end justify-between border-b-2 border-black pb-3">
                 <div>
-                  <p className="text-[11px] font-semibold tracking-[0.2em] text-neutral-500">STREETFACTORY · PARTS &amp; SERVICE</p>
+                  <p className="text-[11px] font-semibold tracking-[0.2em] text-neutral-500">RIDERMANIA · PARTS &amp; SERVICE</p>
                   <h1 className="mt-1 text-[26px] font-bold tracking-tight">{title}</h1>
                 </div>
                 <div className="text-right text-[12.5px] leading-relaxed">
@@ -96,7 +96,7 @@ export function PrintSheet({ docs, sender, defaultWithPrice = false, allowToggle
                 </div>
                 <div>
                   <p className="mb-1 text-[11px] font-semibold text-neutral-500">보내는 곳</p>
-                  <p className="text-[15px] font-bold">{sender?.companyName || "Streetfactory"}</p>
+                  <p className="text-[15px] font-bold">{sender?.companyName || "라이더매니아"}</p>
                   {sender?.ceoName && <p>대표 {sender.ceoName}</p>}
                   {sender?.bizNo && <p>사업자번호 {bizNo(sender.bizNo)}</p>}
                   {sender?.mailOrderNo && <p>통신판매업 {sender.mailOrderNo}</p>}
@@ -175,7 +175,7 @@ export function PrintSheet({ docs, sender, defaultWithPrice = false, allowToggle
                 <div className="border-t border-black pt-2">출고 담당 (서명)</div>
                 <div className="border-t border-black pt-2">인수 확인 (서명)</div>
               </div>
-              <p className="mt-6 text-center text-[11px] text-neutral-500">이 문서는 Streetfactory 부품 관리 시스템에서 출력되었습니다.</p>
+              <p className="mt-6 text-center text-[11px] text-neutral-500">이 문서는 라이더매니아 부품 관리 시스템에서 출력되었습니다.</p>
             </section>
           );
         })}

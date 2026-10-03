@@ -1,5 +1,5 @@
 /**
- * Streetfactory ERP 데이터 모델 (원본). 설명은 docs/SCHEMA.md 참고.
+ * RiderMania ERP 데이터 모델 (원본). 설명은 docs/SCHEMA.md 참고.
  *
  * 금액 규칙: 원화는 정수(₩), 외화 단가·환율은 소수 4자리, 원가는 소수 2자리.
  * 모든 금액은 공급가액(부가세 별도).
@@ -314,7 +314,7 @@ export const webOrderLines = pgTable(
 // ---------- 쇼핑 설정 (단일 행 id = 1) ----------
 export const shopSettings = pgTable("shop_settings", {
   id: integer("id").primaryKey(),
-  companyName: text("company_name").notNull().default("Streetfactory"),
+  companyName: text("company_name").notNull().default("라이더매니아"),
   ceoName: text("ceo_name"),
   bizNo: text("biz_no"),
   mailOrderNo: text("mail_order_no"), // 통신판매업 신고번호

@@ -11,7 +11,7 @@ export default async function ShopSettingsPage() {
   await requireAdmin();
   const s = await getShopSettings();
   const h = await headers();
-  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "streetfactory.park0727.workers.dev"}`;
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "ridermania.park0727.workers.dev"}`;
   return (
     <>
       <PageHeader title="주문 화면 설정" description="거래처가 쓰는 주문 화면의 입금 안내, 공지, 거래명세서에 찍히는 회사 정보를 정합니다." />

@@ -29,7 +29,7 @@ export async function shopLogin(_: ShopLoginState, fd: FormData): Promise<ShopLo
     await supabase.auth.signOut();
     return staff
       ? { error: "이 계정은 직원용 계정입니다. 아래 버튼을 눌러 관리자 화면에서 로그인해 주세요.", goto: { href: "/login", label: "관리자 화면으로 가기" } }
-      : { error: "주문할 수 있는 계정이 아닙니다. Streetfactory 담당자에게 연락해 주세요." };
+      : { error: "주문할 수 있는 계정이 아닙니다. 라이더매니아 담당자에게 연락해 주세요." };
   }
   if (!c.active) {
     await supabase.auth.signOut();

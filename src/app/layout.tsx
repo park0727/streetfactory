@@ -8,7 +8,7 @@ const mono = IBM_Plex_Mono({ variable: "--font-geist-mono", subsets: ["latin"], 
 const display = Barlow_Semi_Condensed({ variable: "--font-barlow", subsets: ["latin"], weight: ["500", "600", "700"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Streetfactory", template: "%s · Streetfactory" },
+  title: { default: "라이더매니아", template: "%s · 라이더매니아" },
   description: "수입 오토바이 부품 재고·판매·거래처 관리",
 };
 

@@ -128,7 +128,7 @@
     @apply font-sans;
   }
 }
-/* ---------- Streetfactory 테마: 산업용 네이비 & 슬레이트 (docs/DESIGN.md) ---------- */
+/* ---------- RiderMania 테마: 산업용 네이비 & 슬레이트 (docs/DESIGN.md) ---------- */
 :root {
   --background: #f4f6f9;
   --foreground: #0e1729;

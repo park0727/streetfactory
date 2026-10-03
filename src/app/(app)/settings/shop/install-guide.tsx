@@ -7,7 +7,7 @@ import { Panel } from "@/components/page-header";
 /** 거래처에게 보낼 주문 화면 주소와 휴대폰 홈 화면 추가 방법 */
 export function InstallGuide({ origin }: { origin: string }) {
   const url = `${origin}/shop`;
-  const msg = `[Streetfactory 부품 주문]\n아래 주소에서 발급받은 계정으로 로그인하면 부품을 주문할 수 있습니다.\n${url}\n\n휴대폰 홈 화면에 추가하면 앱처럼 쓸 수 있어요.\n· 아이폰: 사파리에서 열고 아래쪽 공유 버튼 → '홈 화면에 추가'\n· 안드로이드: 크롬에서 열고 오른쪽 위 ⋮ → '홈 화면에 추가'`;
+  const msg = `[라이더매니아 부품 주문]\n아래 주소에서 발급받은 계정으로 로그인하면 부품을 주문할 수 있습니다.\n${url}\n\n휴대폰 홈 화면에 추가하면 앱처럼 쓸 수 있어요.\n· 아이폰: 사파리에서 열고 아래쪽 공유 버튼 → '홈 화면에 추가'\n· 안드로이드: 크롬에서 열고 오른쪽 위 ⋮ → '홈 화면에 추가'`;
   return (
     <Panel className="h-fit space-y-3 p-5">
       <p className="text-[14px] font-semibold">거래처에 보낼 안내</p>

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireModule } from "@/lib/auth";
 import { str } from "@/lib/query-params";
-import { PrintSheet } from "./print-sheet";
+import { DuplexSheet } from "./duplex-sheet";
 import { loadPrintDocs, parseIds } from "@/lib/print/sales-docs";
 import { getShopSettings } from "@/lib/shop";
 
@@ -15,5 +15,5 @@ export default async function PrintSalesPage({ searchParams }: PageProps<"/print
   const docs = await loadPrintDocs(ids);
   if (docs.length === 0) notFound();
 
-  return <PrintSheet docs={docs} sender={await getShopSettings()} />;
+  return <DuplexSheet docs={docs} sender={await getShopSettings()} />;
 }

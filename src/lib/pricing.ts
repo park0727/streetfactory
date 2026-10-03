@@ -14,3 +14,6 @@ export const PRICE_TIER = { retail: "권장소비자가", wholesale: "도매가"
 export type Availability = "ok" | "low" | "out";
 export const availability = (available: number, status: string): Availability => (status !== "active" || available <= 0 ? "out" : available < 5 ? "low" : "ok");
 export const AVAILABILITY_LABEL: Record<Availability, string> = { ok: "주문 가능", low: "소량 남음", out: "품절" };
+
+/** 주문 화면 표시가: 부가세 별도 청구 거래처면 공급가 × 1.1, 아니면 그대로 */
+export const shown = (supply: number, vatApplied: boolean) => (vatApplied ? Math.round(supply * 1.1) : supply);

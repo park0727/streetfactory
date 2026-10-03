@@ -2,12 +2,13 @@ import { and, asc, count, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, parts, vAvailable } from "@/db/schema";
 import { getShopSettings, requireCustomer } from "@/lib/shop";
-import { availability, priceFor, PRICE_TIER } from "@/lib/pricing";
+import { availability, priceFor, shown } from "@/lib/pricing";
 import { int, str } from "@/lib/query-params";
 import { CatalogFilters } from "./catalog-filters";
 import { ProductRow } from "./product-row";
 import { LoadMore } from "./load-more";
 import { InstallApp } from "../install-app";
+import { ContactCall } from "../contact-call";
 
 export const metadata = { title: "상품" };
 const PAGE = 40;
@@ -51,16 +52,13 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     getShopSettings(),
   ]);
 
-  const priceNote = me.priceTier === "wholesale" || me.discountRate > 0 ? `${me.partnerName} 적용가 (${PRICE_TIER[me.priceTier]}${me.discountRate > 0 ? ` −${me.discountRate}%` : ""})` : "권장소비자가";
 
   return (
     <div className="space-y-3">
       <InstallApp variant="banner" />
       {settings?.shopNotice && <p className="rounded-md border border-signal/30 bg-signal/5 px-3 py-2 text-[13px] whitespace-pre-line">{settings.shopNotice}</p>}
       <CatalogFilters cats={cats.map((c) => ({ id: c.id, name: c.name }))} />
-      <p className="text-[12px] text-steel">
-        {total.toLocaleString()}개 상품 · 가격은 {priceNote}, 부가세 별도
-      </p>
+      <p className="text-[12px] text-steel">{total.toLocaleString()}개 상품</p>
       {rows.length === 0 ? (
         <div className="rounded-md border bg-card px-6 py-14 text-center">
           <p className="text-sm font-medium">조건에 맞는 상품이 없습니다</p>
@@ -71,12 +69,13 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           {rows.map((r) => (
             <ProductRow
               key={r.id}
-              p={{ partId: r.id, code: r.code, name: r.name, spec: r.spec, manufacturer: r.manufacturer, price: priceFor(r, me), availability: availability(r.available, r.status), paused: r.status === "paused" }}
+              p={{ partId: r.id, code: r.code, name: r.name, spec: r.spec, manufacturer: r.manufacturer, price: shown(priceFor(r, me), me.vatApplied), availability: availability(r.available, r.status), paused: r.status === "paused" }}
             />
           ))}
         </ul>
       )}
       {rows.length < total && <LoadMore next={limit + PAGE} />}
+      <ContactCall phone={settings?.phone} variant="card" className="mt-2" />
     </div>
   );
 }

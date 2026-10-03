@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { OrderStatusChip } from "../../../order-status";
 import { CancelOrderButton } from "./cancel-button";
 import { CopyButton } from "./copy-button";
+import { ContactCall } from "../../../contact-call";
 
 export const metadata = { title: "주문 상세" };
 
@@ -54,6 +55,7 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
           {settings?.orderNotice && <p className="mt-1.5 text-[13.5px] whitespace-pre-line">{settings.orderNotice}</p>}
         </div>
       )}
+      {done && <ContactCall phone={settings?.phone} variant="card" />}
 
       {o.status === "pending" && (
         <section className="rounded-md border-2 border-primary/80 bg-card p-4">

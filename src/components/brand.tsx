@@ -7,7 +7,7 @@ export function Brand({ size = "md", className }: { size?: "sm" | "md" | "lg"; c
     <div className={cn("flex items-center gap-2", className)}>
       <span aria-hidden className="inline-block h-[1em] w-[3px] shrink-0 rounded-sm bg-signal" />
       <span className={cn("font-display font-semibold uppercase tracking-[0.12em] whitespace-nowrap", s)}>
-        Street<span className="font-medium opacity-70">factory</span>
+        Rider<span className="font-medium opacity-70">Mania</span>
       </span>
     </div>
   );
