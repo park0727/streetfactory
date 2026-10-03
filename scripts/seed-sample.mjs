@@ -14,7 +14,7 @@ const sql = postgres(url, { max: 1 });
 
 await sql`truncate stock_movements, sales_lines, sales_orders, inbound_lines, inbound_orders, parts, partners, suppliers, categories, doc_sequences restart identity cascade`;
 if (adminId) {
-  await sql`insert into profiles (id, email, name, role, can_parts, can_repair, must_change_password) values (${adminId}, 'admin@streetfactory.kr', '관리자', 'admin', true, true, false) on conflict (id) do update set must_change_password = false`;
+  await sql`insert into profiles (id, email, name, role, can_parts, can_repair, must_change_password) values (${adminId}, 'admin@ridermania.co.kr', '관리자', 'admin', true, true, false) on conflict (id) do update set must_change_password = false`;
 }
 
 const cats = ["브레이크", "엔진", "구동계", "전장", "서스펜션", "외장", "소모품"];

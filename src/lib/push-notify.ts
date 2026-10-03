@@ -8,7 +8,7 @@ function keys() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) return null;
-  return { publicKey, privateKey, subject: "mailto:admin@streetfactory.kr" };
+  return { publicKey, privateKey, subject: "mailto:admin@ridermania.co.kr" };
 }
 
 export const pushConfigured = () => keys() !== null;
