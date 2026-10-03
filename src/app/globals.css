@@ -196,3 +196,16 @@ body { background: var(--background); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/*
+ * 입력 창(Dialog)은 아이폰 상태 표시줄·아래 막대를 뺀 보이는 영역 안에서 가운데 정렬한다.
+ * 아이폰 사파리는 화면이 상태 표시줄 뒤까지 이어져서, 그냥 가운데 두면 창 위쪽(닫기 X)이 시계 밑에 숨는다.
+ * 레이어 밖 규칙이라 각 창의 max-h 유틸리티보다 우선한다.
+ */
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  top: calc(50% + (env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) / 2);
+  max-height: calc(100svh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
