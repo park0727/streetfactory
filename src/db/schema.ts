@@ -333,7 +333,9 @@ export const discountRules = pgTable("discount_rules", {
   categoryId: integer("category_id").references(() => categories.id, { onDelete: "cascade" }), // null = 전체
   brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }), // null = 전체
   baseRate: numeric("base_rate", { precision: 5, scale: 2, mode: "number" }).notNull().default(0), // 항상 적용 %
-  tiers: jsonb("tiers").$type<DiscountTier[]>().notNull().default([]), // 같은 상품 N개 이상 %
+  tiers: jsonb("tiers").$type<DiscountTier[]>().notNull().default([]), // N개 이상 %
+  qtyBasis: text("qty_basis").$type<"total" | "line">().notNull().default("total"), // total: 대상 상품 주문 수량 합계, line: 같은 상품 하나 기준
+  pickMode: text("pick_mode").$type<"target" | "picked">().notNull().default("target"), // target: 카테고리·브랜드 전체(제외 목록 적용), picked: 직접 고른 상품만
   createdAt: createdAt(),
 });
 export const discountRuleExclusions = pgTable(
@@ -345,6 +347,7 @@ export const discountRuleExclusions = pgTable(
     partId: bigint("part_id", { mode: "number" })
       .notNull()
       .references(() => parts.id, { onDelete: "cascade" }),
+    // pick_mode = target 이면 '뺄 상품', picked 이면 '포함할 상품' 목록으로 쓴다
   },
   (t) => [primaryKey({ columns: [t.ruleId, t.partId] })],
 );

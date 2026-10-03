@@ -16,7 +16,9 @@ const schema = z.object({
   brandId: z.number().int().positive().nullable(),
   baseRate: rate,
   tiers: z.array(z.object({ minQty: z.number().int().min(2, "수량 할인은 2개 이상부터 정할 수 있습니다."), rate })).max(6),
-  excluded: z.array(z.number().int().positive()).max(2000),
+  qtyBasis: z.enum(["total", "line"]),
+  pickMode: z.enum(["target", "picked"]),
+  listed: z.array(z.number().int().positive()).max(2000), // target: 뺄 상품, picked: 포함할 상품
 });
 export type RuleInput = z.infer<typeof schema>;
 
@@ -30,14 +32,15 @@ export async function saveRule(input: RuleInput): Promise<ActionResult> {
   if (!r.success) return { ok: false, error: firstIssue(r.error.issues) };
   const d = r.data;
   if (d.baseRate === 0 && d.tiers.length === 0) return { ok: false, error: "기본 할인이나 수량 할인 중 하나는 넣어 주세요." };
+  if (d.pickMode === "picked" && d.listed.length === 0) return { ok: false, error: "할인할 상품을 하나 이상 골라 주세요." };
   const tiers = [...new Map(d.tiers.map((t) => [t.minQty, t])).values()].sort((a, b) => a.minQty - b.minQty);
   await db.transaction(async (tx) => {
-    const values = { name: d.name, active: d.active, categoryId: d.categoryId, brandId: d.brandId, baseRate: d.baseRate, tiers };
+    const values = { name: d.name, active: d.active, categoryId: d.pickMode === "picked" ? null : d.categoryId, brandId: d.pickMode === "picked" ? null : d.brandId, baseRate: d.baseRate, tiers, qtyBasis: d.qtyBasis, pickMode: d.pickMode };
     let id = d.id;
     if (id) await tx.update(discountRules).set(values).where(eq(discountRules.id, id));
     else id = (await tx.insert(discountRules).values(values).returning({ id: discountRules.id }))[0].id;
     await tx.delete(discountRuleExclusions).where(eq(discountRuleExclusions.ruleId, id));
-    if (d.excluded.length) await tx.insert(discountRuleExclusions).values([...new Set(d.excluded)].map((partId) => ({ ruleId: id!, partId })));
+    if (d.listed.length) await tx.insert(discountRuleExclusions).values([...new Set(d.listed)].map((partId) => ({ ruleId: id!, partId })));
   });
   refresh();
   return { ok: true, message: "할인 규칙을 저장했습니다. 주문 화면에 바로 반영됩니다." };

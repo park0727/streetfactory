@@ -17,7 +17,20 @@ import type { RuleTier } from "@/lib/pricing";
 import { deleteRule, listTargetParts, saveRule, setRuleActive } from "./actions";
 
 type Opt = { id: number; name: string };
-export type RuleRow = { id: number; name: string; active: boolean; categoryId: number | null; brandId: number | null; categoryName: string | null; brandName: string | null; baseRate: number; tiers: RuleTier[]; excluded: number[] };
+export type RuleRow = {
+  id: number;
+  name: string;
+  active: boolean;
+  categoryId: number | null;
+  brandId: number | null;
+  categoryName: string | null;
+  brandName: string | null;
+  baseRate: number;
+  tiers: RuleTier[];
+  qtyBasis: "total" | "line";
+  pickMode: "target" | "picked";
+  listed: number[];
+};
 
 export function RulesClient({ rules, cats, brands }: { rules: RuleRow[]; cats: Opt[]; brands: Opt[] }) {
   const [editing, setEditing] = useState<RuleRow | "new" | null>(null);
@@ -47,7 +60,7 @@ export function RulesClient({ rules, cats, brands }: { rules: RuleRow[]; cats: O
 function RuleCard({ r, onEdit }: { r: RuleRow; onEdit: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const target = [r.categoryName ?? "모든 카테고리", r.brandName].filter(Boolean).join(" · ");
+  const target = r.pickMode === "picked" ? `직접 고른 상품 ${r.listed.length}개` : [r.categoryName ?? "모든 카테고리", r.brandName].filter(Boolean).join(" · ");
   const ex = 100000;
   return (
     <Panel className={`p-4 ${r.active ? "" : "opacity-60"}`}>
@@ -75,14 +88,14 @@ function RuleCard({ r, onEdit }: { r: RuleRow; onEdit: () => void }) {
         {r.baseRate > 0 && <Badge className="bg-status-critical text-white">항상 {r.baseRate}%</Badge>}
         {r.tiers.map((t) => (
           <Badge key={t.minQty} variant="outline" className="border-status-critical/40 text-status-critical">
-            같은 상품 {t.minQty}개↑ {t.rate}%
+            {r.qtyBasis === "total" ? "합계" : "같은 상품"} {t.minQty}개↑ {t.rate}%
           </Badge>
         ))}
-        {r.excluded.length > 0 && <Badge variant="secondary">제외 {r.excluded.length}개</Badge>}
+        {r.pickMode === "target" && r.listed.length > 0 && <Badge variant="secondary">제외 {r.listed.length}개</Badge>}
       </div>
       <p className="mt-2 text-[12px] text-steel">
         예) {krw(ex)} 상품 → {krw(Math.round(ex * (1 - r.baseRate / 100)))}
-        {r.tiers[0] && `, ${r.tiers[0].minQty}개 이상이면 개당 ${krw(Math.round(ex * (1 - r.tiers[0].rate / 100)))}`}
+        {r.tiers[0] && `, ${r.qtyBasis === "total" ? "대상 상품을 합쳐" : "같은 상품"} ${r.tiers[0].minQty}개 이상이면 개당 ${krw(Math.round(ex * (1 - r.tiers[0].rate / 100)))}`}
       </p>
       <div className="mt-3 flex justify-end gap-1">
         <Button variant="outline" size="sm" onClick={onEdit}>
@@ -106,15 +119,19 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
   const [brandId, setBrandId] = useState<number | null>(rule?.brandId ?? null);
   const [baseRate, setBaseRate] = useState(rule?.baseRate ?? 5);
   const [tiers, setTiers] = useState<RuleTier[]>(rule?.tiers?.length ? rule.tiers : [{ minQty: 4, rate: 10 }]);
-  const [excluded, setExcluded] = useState<Set<number>>(new Set(rule?.excluded ?? []));
+  const [qtyBasis, setQtyBasis] = useState<"total" | "line">(rule?.qtyBasis ?? "total");
+  const [pickMode, setPickMode] = useState<"target" | "picked">(rule?.pickMode ?? "target");
+  const [excluded, setExcluded] = useState<Set<number>>(new Set(rule?.listed ?? []));
   const [partsList, setPartsList] = useState<TargetPart[] | null>(null);
   const [q, setQ] = useState("");
   const [loading, startLoad] = useTransition();
   const [saving, startSave] = useTransition();
 
+  // 직접 고르기에서는 카테고리·브랜드가 목록을 좁히는 필터 역할만 한다
   useEffect(() => {
     startLoad(async () => setPartsList(await listTargetParts(categoryId, brandId)));
   }, [categoryId, brandId]);
+  const picked = pickMode === "picked";
 
   const shownParts = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -135,8 +152,15 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
             <Label htmlFor="dr-name">규칙 이름</Label>
             <Input id="dr-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
           </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>할인할 상품</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Choice on={!picked} onClick={() => { setPickMode("target"); setExcluded(new Set()); }} title="카테고리·브랜드 전체" desc="새로 등록하는 상품도 자동 포함. 일부만 뺄 수 있음" />
+              <Choice on={picked} onClick={() => { setPickMode("picked"); setExcluded(new Set()); }} title="직접 고른 상품만" desc="아래 목록에서 체크한 상품만 할인" />
+            </div>
+          </div>
           <div className="space-y-1.5">
-            <Label htmlFor="dr-cat">대상 카테고리</Label>
+            <Label htmlFor="dr-cat">{picked ? "목록 좁히기: 카테고리" : "대상 카테고리"}</Label>
             <Select value={categoryId ? String(categoryId) : "all"} onValueChange={(v) => setCategoryId(v === "all" ? null : Number(v))}>
               <SelectTrigger id="dr-cat" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -146,7 +170,7 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="dr-brand">대상 브랜드</Label>
+            <Label htmlFor="dr-brand">{picked ? "목록 좁히기: 브랜드" : "대상 브랜드"}</Label>
             <Select value={brandId ? String(brandId) : "all"} onValueChange={(v) => setBrandId(v === "all" ? null : Number(v))}>
               <SelectTrigger id="dr-brand" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -161,7 +185,11 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
             <p className="text-[11.5px] text-steel">수량과 상관없이 늘 적용. 없으면 0.</p>
           </div>
           <div className="space-y-1.5">
-            <Label>수량 할인 (같은 상품 기준)</Label>
+            <Label>수량 할인</Label>
+            <div className="mb-1 grid grid-cols-2 gap-1.5">
+              <Choice small on={qtyBasis === "total"} onClick={() => setQtyBasis("total")} title="대상 상품 합계" desc="여러 상품 합쳐서 셈" />
+              <Choice small on={qtyBasis === "line"} onClick={() => setQtyBasis("line")} title="같은 상품 하나" desc="한 상품 수량만 셈" />
+            </div>
             <div className="space-y-1.5">
               {tiers.map((t, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-[13px]">
@@ -181,8 +209,8 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <div className="flex items-center justify-between">
-              <Label>할인에서 뺄 상품 (특정 사이즈 제외)</Label>
-              <span className="text-[12px] text-steel">{excluded.size}개 제외됨</span>
+              <Label>{picked ? "할인할 상품 고르기" : "할인에서 뺄 상품 (특정 사이즈 제외)"}</Label>
+              <span className="text-[12px] text-steel">{picked ? `${excluded.size}개 고름` : `${excluded.size}개 제외됨`}</span>
             </div>
             <div className="relative">
               <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-steel" />
@@ -197,8 +225,8 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
                 <ul className="divide-y">
                   {shownParts.map((p) => (
                     <li key={p.id}>
-                      <label className={`flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-[13px] ${excluded.has(p.id) ? "bg-status-critical/5" : ""}`}>
-                        <input type="checkbox" className="size-4 accent-[var(--status-critical)]" checked={excluded.has(p.id)} onChange={() => toggle(p.id)} />
+                      <label className={`flex cursor-pointer items-center gap-2.5 px-3 py-1.5 text-[13px] ${excluded.has(p.id) ? (picked ? "bg-status-ok/5" : "bg-status-critical/5") : ""}`}>
+                        <input type="checkbox" className={`size-4 ${picked ? "accent-[var(--status-ok)]" : "accent-[var(--status-critical)]"}`} checked={excluded.has(p.id)} onChange={() => toggle(p.id)} />
                         {p.tireSize && <span className="tabular font-semibold">{p.tireSize}</span>}
                         <span className="min-w-0 flex-1 truncate">{p.name}{p.brandName && <span className="ml-1 text-steel">{p.brandName}</span>}</span>
                         <span className="code text-[11.5px] text-steel">{p.code}</span>
@@ -208,7 +236,19 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
                 </ul>
               )}
             </div>
-            <p className="text-[11.5px] text-steel">체크한 상품은 이 규칙의 할인을 받지 않습니다. 나중에 새 사이즈를 등록하면 자동으로 할인 대상이 됩니다.</p>
+            <p className="text-[11.5px] text-steel">
+              {picked ? "체크한 상품만 할인됩니다. 새 상품은 여기서 직접 체크해야 할인 대상이 됩니다." : "체크한 상품은 이 규칙의 할인을 받지 않습니다. 나중에 새 사이즈를 등록하면 자동으로 할인 대상이 됩니다."}
+              {picked && excluded.size > 0 && (
+                <Button type="button" variant="link" size="xs" className="ml-1 h-auto p-0" onClick={() => setExcluded(new Set())}>
+                  모두 해제
+                </Button>
+              )}
+              {picked && (
+                <Button type="button" variant="link" size="xs" className="ml-2 h-auto p-0" onClick={() => setExcluded((s0) => new Set([...s0, ...shownParts.map((p) => p.id)]))}>
+                  보이는 목록 모두 고르기
+                </Button>
+              )}
+            </p>
           </div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
             <Switch checked={active} onCheckedChange={setActive} /> 이 규칙 사용
@@ -220,7 +260,7 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
             disabled={saving}
             onClick={() =>
               startSave(async () => {
-                const r = await saveRule({ id: rule?.id, name, active, categoryId, brandId, baseRate, tiers: tiers.filter((t) => t.rate > 0), excluded: [...excluded] });
+                const r = await saveRule({ id: rule?.id, name, active, categoryId, brandId, baseRate, tiers: tiers.filter((t) => t.rate > 0), qtyBasis, pickMode, listed: [...excluded] });
                 if (!r.ok) return void toast.error(r.error);
                 toast.success(r.message);
                 onClose();
@@ -233,5 +273,14 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Choice({ on, onClick, title, desc, small }: { on: boolean; onClick: () => void; title: string; desc: string; small?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={on} className={`rounded-md border text-left transition-colors ${small ? "px-2 py-1.5" : "px-3 py-2"} ${on ? "border-primary bg-primary/5 ring-1 ring-primary" : "bg-card hover:bg-muted/50"}`}>
+      <span className={`block font-medium ${small ? "text-[12.5px]" : "text-[13.5px]"}`}>{title}</span>
+      <span className="block text-[11.5px] text-steel">{desc}</span>
+    </button>
   );
 }

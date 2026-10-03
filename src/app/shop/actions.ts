@@ -11,7 +11,7 @@ import { customerAccounts, parts, profiles, vAvailable, webOrderLines, webOrders
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { requireCustomer } from "@/lib/shop";
-import { availability, quotePart, type Availability, type RuleTier } from "@/lib/pricing";
+import { availability, quotePart, ruleTotals, type Availability, type NextTier } from "@/lib/pricing";
 import { loadActiveRules } from "@/lib/discounts";
 import { firstIssue, type ActionResult } from "@/lib/action-result";
 import { todayKST } from "@/lib/dates";
@@ -60,7 +60,7 @@ export type QuoteLine = {
   price: number; // 이 수량에서의 판매가 (공급가)
   list: number; // 정가 (공급가)
   rate: number; // 적용 할인율
-  nextTier: RuleTier | null;
+  nextTier: NextTier | null;
   availability: Availability;
   orderable: boolean;
   ok: boolean;
@@ -80,12 +80,19 @@ export async function quoteCart(items: { partId: number; qty: number }[]): Promi
     loadActiveRules(),
   ]);
   const map = new Map(rows.map((r) => [r.id, r]));
+  // 같은 부품이 여러 줄이면 합쳐서, 주문 가능한 상품만으로 규칙별 합계를 낸다
+  const merged = new Map<number, number>();
+  for (const i of items) if (map.has(i.partId)) merged.set(i.partId, (merged.get(i.partId) ?? 0) + i.qty);
+  const totals = ruleTotals(
+    [...merged].filter(([id]) => map.get(id)!.online && map.get(id)!.status === "active").map(([id, qty]) => ({ part: map.get(id)!, qty })),
+    rules,
+  );
   return items
     .filter((i) => map.has(i.partId))
     .map((i) => {
       const r = map.get(i.partId)!;
       const orderable = r.online && r.status === "active";
-      const q = quotePart(r, me, rules, i.qty);
+      const q = quotePart(r, me, rules, merged.get(i.partId) ?? i.qty, totals);
       return {
         partId: r.id,
         code: r.code,
@@ -138,13 +145,14 @@ export async function placeOrder(input: z.infer<typeof orderSchema>): Promise<Ac
       }
       if (problems.length) throw new OrderError(problems.join(" · "));
 
+      const totals = ruleTotals([...need].map(([id, qty]) => ({ part: map.get(id)!, qty })), rules);
       const orderNo = await nextDocNo(tx, "WEB", todayKST());
       const [o] = await tx
         .insert(webOrders)
         .values({ orderNo, partnerId: me.partnerId, customerId: me.id, vatApplied: me.vatApplied, memo: r.data.memo ?? null })
         .returning({ id: webOrders.id });
-      await tx.insert(webOrderLines).values([...need].map(([partId, qty], i) => ({ orderId: o.id, lineNo: i + 1, partId, qty, unitPrice: quotePart(map.get(partId)!, me, rules, qty).unit })));
-      const supply = [...need].reduce((a, [partId, qty]) => a + qty * quotePart(map.get(partId)!, me, rules, qty).unit, 0);
+      await tx.insert(webOrderLines).values([...need].map(([partId, qty], i) => ({ orderId: o.id, lineNo: i + 1, partId, qty, unitPrice: quotePart(map.get(partId)!, me, rules, qty, totals).unit })));
+      const supply = [...need].reduce((a, [partId, qty]) => a + qty * quotePart(map.get(partId)!, me, rules, qty, totals).unit, 0);
       return { id: o.id, orderNo, total: shown(supply, me.vatApplied), items: need.size };
     });
     revalidatePath("/shop/orders");

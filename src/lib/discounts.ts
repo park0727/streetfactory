@@ -15,6 +15,8 @@ export const loadActiveRules = cache(async (): Promise<ActiveRule[]> => {
     brandId: r.brandId,
     baseRate: Number(r.baseRate),
     tiers: (r.tiers ?? []).filter((t) => t.minQty > 1 && t.rate > 0).sort((a, b) => a.minQty - b.minQty),
-    excluded: excl.filter((e) => e.ruleId === r.id).map((e) => e.partId),
+    qtyBasis: r.qtyBasis === "line" ? "line" : "total",
+    pickMode: r.pickMode === "picked" ? "picked" : "target",
+    listed: excl.filter((e) => e.ruleId === r.id).map((e) => e.partId),
   }));
 });

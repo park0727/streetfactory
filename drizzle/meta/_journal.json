@@ -71,6 +71,13 @@
       "when": 1791001942768,
       "tag": "0009_push",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791003204653,
+      "tag": "0010_rule_qty_basis",
+      "breakpoints": true
     }
   ]
 }

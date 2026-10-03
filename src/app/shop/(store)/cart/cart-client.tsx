@@ -41,6 +41,8 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
   const supply = lines.reduce((a, l) => a + l.qty * (l.supplyPrice ?? l.price), 0);
   const vat = vatApplied ? Math.round(supply * 0.1) : 0;
   const problems = lines.filter((l) => l.q && !l.q.ok);
+  // 합계 기준 할인 안내는 규칙마다 한 번만
+  const totalHints = [...new Map(lines.flatMap((l) => (l.q?.nextTier?.basis === "total" ? [[l.q.nextTier.ruleName, l.q.nextTier] as const] : []))).values()];
   const missing = quote.size > 0 ? lines.filter((l) => !l.q) : [];
   const canOrder = items.length > 0 && quote.size > 0 && problems.length === 0 && missing.length === 0 && !checking;
   const totalQty = useMemo(() => items.reduce((a, i) => a + i.qty, 0), [items]);
@@ -74,6 +76,11 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
   return (
     <div className="space-y-4">
       <h1 className="font-display text-[22px] font-semibold">장바구니</h1>
+      {totalHints.map((t) => (
+        <p key={t.ruleName} className="rounded-md border border-status-critical/30 bg-status-critical/5 px-3 py-2 text-[13.5px] font-medium text-status-critical">
+          {t.ruleName} 상품을 {t.remaining}개 더 담으면 모두 {t.rate}% 할인됩니다
+        </p>
+      ))}
       <ul className="divide-y overflow-hidden rounded-md border bg-card">
         {lines.map((l) => {
           const bad = l.q && !l.q.ok;
@@ -118,7 +125,11 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
                   <span className="text-steel line-through">{krw(l.listShown)}</span> → {krw(l.price)} ({Math.round((1 - l.price / l.listShown) * 100)}% 할인 적용)
                 </p>
               )}
-              {l.q?.nextTier && l.q.ok && <p className="mt-0.5 text-[12px] text-primary">{l.q.nextTier.minQty}개 이상이면 {l.q.nextTier.rate}% 할인 ({l.q.nextTier.minQty - l.qty}개 더)</p>}
+              {l.q?.nextTier && l.q.ok && l.q.nextTier.basis === "line" && (
+                <p className="mt-0.5 text-[12px] text-primary">
+                  이 상품을 {l.q.nextTier.remaining}개 더 담으면 {l.q.nextTier.rate}% 할인
+                </p>
+              )}
               {bad && <p className="mt-1.5 text-[12.5px] text-status-critical">{l.q!.orderable ? "주문 가능 수량을 초과했습니다. 수량을 줄여 주세요." : "지금 주문할 수 없는 상품입니다. 삭제해 주세요."}</p>}
             </li>
           );

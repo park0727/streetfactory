@@ -21,7 +21,9 @@ export default async function DiscountsPage() {
         brandName: brands.name,
         baseRate: discountRules.baseRate,
         tiers: discountRules.tiers,
-        excluded: sql<number[]>`coalesce((select jsonb_agg(e.part_id) from discount_rule_exclusions e where e.rule_id = discount_rules.id), '[]'::jsonb)`,
+        qtyBasis: discountRules.qtyBasis,
+        pickMode: discountRules.pickMode,
+        listed: sql<number[]>`coalesce((select jsonb_agg(e.part_id) from discount_rule_exclusions e where e.rule_id = discount_rules.id), '[]'::jsonb)`,
       })
       .from(discountRules)
       .leftJoin(categories, eq(categories.id, discountRules.categoryId))
@@ -36,7 +38,7 @@ export default async function DiscountsPage() {
         title="할인 규칙"
         description="모든 거래처의 주문 화면에 공통으로 적용됩니다. 거래처에 따로 정한 할인율과 비교해 더 큰 할인 하나만 적용됩니다."
       />
-      <RulesClient rules={rules.map((r) => ({ ...r, baseRate: Number(r.baseRate), excluded: (r.excluded ?? []).map(Number) }))} cats={cats} brands={brs} />
+      <RulesClient rules={rules.map((r) => ({ ...r, baseRate: Number(r.baseRate), listed: (r.listed ?? []).map(Number) }))} cats={cats} brands={brs} />
     </>
   );
 }

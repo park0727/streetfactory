@@ -4,7 +4,7 @@ import { Minus, Plus, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { krw } from "@/lib/format";
-import type { Availability, RuleTier } from "@/lib/pricing";
+import { tierHint, type Availability, type NextTier } from "@/lib/pricing";
 import { AvailabilityChip } from "../availability-chip";
 import { useCart } from "../cart-context";
 import { BrandMark } from "../brand-mark";
@@ -21,7 +21,7 @@ type P = {
   price: number; // 표시 판매가
   list: number; // 표시 정가
   off: number; // 할인 %
-  nextTier: RuleTier | null;
+  nextTier: NextTier | null;
   availability: Availability;
   paused: boolean;
 };
@@ -65,7 +65,7 @@ export function ProductRow({ p }: { p: P }) {
         <AvailabilityChip a={p.availability} paused={p.paused} />
       </div>
       {p.nextTier && !disabled && (
-        <p className="col-span-2 -mt-1 text-[12px] font-medium text-status-critical">같은 상품 {p.nextTier.minQty}개 이상 사면 {p.nextTier.rate}% 할인</p>
+        <p className="col-span-2 -mt-1 text-[12px] font-medium text-status-critical">{tierHint(p.nextTier)}</p>
       )}
       <div className="col-span-2 flex items-center justify-end gap-2">
         {inCart > 0 && <span className="mr-auto text-[12px] text-primary">장바구니에 {inCart}개</span>}
