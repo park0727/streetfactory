@@ -12,6 +12,13 @@
     { "binding": "WORKER_SELF_REFERENCE", "service": "ridermania" }
   ],
   "observability": { "enabled": true },
+  // 공식 주소. www 와 workers.dev 주소는 src/proxy.ts 에서 ridermania.co.kr 로 보낸다.
+  // workers.dev 주소는 켜 두되, proxy 가 ridermania.co.kr 로 보낸다 (예전 링크 보호)
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "ridermania.co.kr", "custom_domain": true },
+    { "pattern": "www.ridermania.co.kr", "custom_domain": true }
+  ],
   // DB(서울) 근처에서 Worker 를 실행하도록 배치 (요청이 먼 PoP 로 들어와도 DB 왕복이 짧아진다)
   "placement": { "mode": "smart" },
   // Supabase 세션 풀러(5432) 를 원본으로 하는 Hyperdrive. 연결 풀을 DB 근처에 유지한다.

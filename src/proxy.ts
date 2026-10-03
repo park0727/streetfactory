@@ -8,7 +8,19 @@ const PUBLIC_PATHS = ["/login", "/shop/login"];
  * 모든 요청에서 Supabase 세션 쿠키를 갱신하고, 비로그인 사용자는 /login 으로 보낸다.
  * 권한(role/module) 검사는 여기서 하지 않고 각 페이지/액션에서 profiles 를 읽어 수행한다.
  */
+/** 공식 주소. www·workers.dev 로 들어오면 같은 경로로 옮긴다 (로컬 개발은 그대로). */
+const CANONICAL_HOST = "ridermania.co.kr";
+
 export async function proxy(request: NextRequest) {
+  const host = request.headers.get("host") ?? "";
+  const insecure = host === CANONICAL_HOST && (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "http";
+  if (host === `www.${CANONICAL_HOST}` || host.endsWith(".workers.dev") || insecure) {
+    const url = request.nextUrl.clone();
+    url.protocol = "https:";
+    url.host = CANONICAL_HOST;
+    url.port = "";
+    return NextResponse.redirect(url, 301);
+  }
   // 레이아웃에서 현재 경로를 알 수 있게 헤더로 전달한다 (강제 비밀번호 변경 리다이렉트용).
   request.headers.set("x-pathname", request.nextUrl.pathname);
   let response = NextResponse.next({ request });

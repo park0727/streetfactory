@@ -30,6 +30,7 @@ npm run preview      # Workers 런타임으로 로컬 실행
 인증은 Supabase 전용이라 화면 E2E 는 실제 Supabase 프로젝트가 필요하다.
 
 ## 배포 환경 메모
+- 공식 주소는 `ridermania.co.kr` (Workers Custom Domain). www·workers.dev·http 는 `src/proxy.ts` 가 301 로 옮긴다.
 - 한국에서 workers.dev 로 접속하면 요청이 LAX(미국) PoP 로 들어오는 경우가 있다. Smart Placement(`placement.mode: smart`) 와 Hyperdrive 로 DB 왕복을 줄였다. 응답 1~1.5초 수준이면 정상.
 - Worker 번들은 gzip 약 4MB. 무료 플랜 한도 근처이므로 서버 번들에 큰 라이브러리를 추가하지 않는다 (exceljs·recharts 는 클라이언트 전용).
 
@@ -41,7 +42,7 @@ npm run preview      # Workers 런타임으로 로컬 실행
 ## 반드시 지킬 규칙
 - **DB 풀 `max` 는 1 로 두지 않는다** (현재 5). 트랜잭션 풀러에 연결 1개로 동시 쿼리를 보내면 응답이 영구히 멈춘다. 페이지 하나에서 `Promise.all` 로 동시에 보내는 쿼리는 5개 이하.
 - **Workers 에서는 DB 클라이언트를 요청 간에 공유하지 않는다.** `src/db/index.ts` 가 프로덕션에서 React `cache()` 로 요청마다 새 클라이언트를 만든다. 전역 캐시로 되돌리면 "Failed query" 간헐 오류가 난다.
-- 프로덕션 DB 접속은 **Hyperdrive** 바인딩(`wrangler.jsonc`) 을 통한다. 원본은 Supabase 세션 풀러(5432). **쿼리 캐시는 꺼 둔다**(`--caching-disabled`). 켜면 저장 후 최대 60초 동안 목록이 옛 값을 보여준다.
+- 프로덕션 DB 접속은 **Hyperdrive** 바인딩(`wrangler.jsonc`) 을 통한다. 원본은 Supabase 세션 풀러(5432), `origin_connection_limit` 10 (세션 풀러 한도 15 중 스크립트·마이그레이션용 여유). 트랜잭션 풀러(6543)로 바꾸면 응답이 수십 초씩 멈춘다. **쿼리 캐시는 꺼 둔다**(`--caching-disabled`). 켜면 저장 후 최대 60초 동안 목록이 옛 값을 보여준다.
 - 인증 확인은 `supabase.auth.getClaims()` (로컬 JWT 검증). `getUser()` 는 요청마다 Supabase 서버를 호출하므로 쓰지 않는다.
 - 비밀번호 변경·발급은 모두 서비스 키의 `auth.admin.updateUserById` 로 한다. 서버 액션에서 세션 쿠키 기반 `updateUser` 는 "Auth session missing" 이 날 수 있어 쓰지 않는다.
 - 로그인 액션이 임시 비밀번호 상태를 확인해 바로 `/settings/profile` 로 보낸다. `src/app/loading.tsx` 가 레이아웃 준비 중 빈 화면을 막는다.
