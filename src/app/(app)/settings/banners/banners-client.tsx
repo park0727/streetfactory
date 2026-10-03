@@ -108,7 +108,7 @@ function BannerDialog({ row, cats, onClose }: { row: Row | null; cats: Cat[]; on
       setUploading(false);
     }
   }
-  const linkUrl = kind === "cat" && linkValue ? `/shop?cat=${linkValue}` : kind === "q" && linkValue.trim() ? `/shop?q=${encodeURIComponent(linkValue.trim())}` : null;
+  const linkUrl = kind === "cat" && linkValue ? `/?cat=${linkValue}` : kind === "q" && linkValue.trim() ? `/?q=${encodeURIComponent(linkValue.trim())}` : null;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>

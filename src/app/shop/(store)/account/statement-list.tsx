@@ -11,7 +11,7 @@ type Doc = { id: number; docNo: string; docDate: string; total: number; balance:
 export function StatementList({ docs }: { docs: Doc[] }) {
   const [sel, setSel] = useState<Set<number>>(new Set());
   const toggle = (id: number) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const open = (ids: number[]) => window.open(`/shop/statement?ids=${ids.join(",")}`, "_blank");
+  const open = (ids: number[]) => window.open(`/statement?ids=${ids.join(",")}`, "_blank");
   return (
     <section className="rounded-md border bg-card">
       <header className="flex items-center gap-2 border-b px-4 py-3">

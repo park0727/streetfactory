@@ -57,7 +57,7 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
         return;
       }
       clear();
-      router.push(`/shop/orders/${r.data.id}?done=1`);
+      router.push(`/orders/${r.data.id}?done=1`);
     });
   }
 
@@ -68,7 +68,7 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
         <p className="text-base font-medium">장바구니가 비어 있습니다</p>
         <p className="mt-1 text-[13px] text-steel">상품 화면에서 필요한 부품을 담아 주세요.</p>
         <Button asChild className="mt-5">
-          <Link href="/shop">상품 보러 가기</Link>
+          <Link href="/">상품 보러 가기</Link>
         </Button>
       </div>
     );

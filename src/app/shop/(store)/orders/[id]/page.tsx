@@ -43,7 +43,7 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
   return (
     <div className="space-y-4">
       {!done && (
-        <Link href="/shop/orders" className="inline-flex items-center gap-1 text-[13px] text-steel">
+        <Link href="/orders" className="inline-flex items-center gap-1 text-[13px] text-steel">
           <ArrowLeft className="size-4" /> 주문 내역
         </Link>
       )}
@@ -122,14 +122,14 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
         {o.status === "pending" && <CancelOrderButton id={o.id} orderNo={o.orderNo} />}
         {o.status === "shipped" && o.salesOrderId && (
           <Button variant="outline" asChild>
-            <a href={`/shop/statement?ids=${o.salesOrderId}`} target="_blank" rel="noopener">
+            <a href={`/statement?ids=${o.salesOrderId}`} target="_blank" rel="noopener">
               <FileText /> 거래명세서 ({o.salesDocNo})
             </a>
           </Button>
         )}
         {done && (
           <Button asChild variant="outline" className="ml-auto">
-            <Link href="/shop">계속 둘러보기</Link>
+            <Link href="/">계속 둘러보기</Link>
           </Button>
         )}
       </div>

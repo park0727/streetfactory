@@ -11,7 +11,7 @@ export function ShopPasswordForm({ forced }: { forced: boolean }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(changeMyPassword, undefined);
   useActionToast(state, () => {
-    if (forced) router.replace("/shop");
+    if (forced) router.replace("/");
   });
   return (
     <form action={action} className="space-y-3" key={state?.ok ? "done" : "form"}>

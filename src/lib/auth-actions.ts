@@ -1,4 +1,5 @@
 "use server";
+import { urlFor } from "@/lib/site-url";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -21,7 +22,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   const [p] = await db.select({ must: profiles.mustChangePassword, active: profiles.isActive }).from(profiles).where(eq(profiles.id, data.user.id));
   if (!p) {
     await supabase.auth.signOut();
-    return { error: "이 계정은 거래처 주문용 계정입니다. 아래 버튼을 눌러 주문 화면에서 로그인해 주세요.", goto: { href: "/shop/login", label: "주문 화면으로 가기" } };
+    return { error: "이 계정은 거래처 주문용 계정입니다. 아래 버튼을 눌러 주문 화면에서 로그인해 주세요.", goto: { href: await urlFor("shop", "/login"), label: "주문 화면으로 가기" } };
   }
   if (!p.active) {
     await supabase.auth.signOut();

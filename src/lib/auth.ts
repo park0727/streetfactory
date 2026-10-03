@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles, type Profile } from "@/db/schema";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { urlFor } from "./site-url";
 
 /** 현재 로그인 사용자의 profile. 없으면 null. 요청 단위로 캐시된다. */
 export const getProfile = cache(async (): Promise<Profile | null> => {
@@ -21,7 +22,7 @@ export async function requireUser(): Promise<Profile> {
   const p = await getProfile();
   if (!p) {
     const { getCustomer } = await import("@/lib/shop");
-    if (await getCustomer()) redirect("/shop");
+    if (await getCustomer()) redirect(await urlFor("shop"));
     redirect("/login?reason=inactive");
   }
   if (!p.isActive) redirect("/login?reason=inactive");

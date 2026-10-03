@@ -1,4 +1,5 @@
 "use server";
+import { urlFor } from "@/lib/site-url";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -32,20 +33,20 @@ export async function shopLogin(_: ShopLoginState, fd: FormData): Promise<ShopLo
     const [staff] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, data.user.id));
     await supabase.auth.signOut();
     return staff
-      ? { error: "이 계정은 직원용 계정입니다. 아래 버튼을 눌러 관리자 화면에서 로그인해 주세요.", goto: { href: "/login", label: "관리자 화면으로 가기" } }
+      ? { error: "이 계정은 직원용 계정입니다. 아래 버튼을 눌러 관리자 화면에서 로그인해 주세요.", goto: { href: await urlFor("admin", "/login"), label: "관리자 화면으로 가기" } }
       : { error: "주문할 수 있는 계정이 아닙니다. 라이더매니아 담당자에게 연락해 주세요." };
   }
   if (!c.active) {
     await supabase.auth.signOut();
     return { error: "사용이 중지된 계정입니다. 담당자에게 문의하세요." };
   }
-  redirect(c.must ? "/shop/account?pw=1" : "/shop");
+  redirect(c.must ? "/account?pw=1" : "/");
 }
 
 export async function shopLogout() {
   const supabase = await createSupabaseServer();
   await supabase.auth.signOut();
-  redirect("/shop/login");
+  redirect("/login");
 }
 
 // 가격 계산에 필요한 부품 컬럼

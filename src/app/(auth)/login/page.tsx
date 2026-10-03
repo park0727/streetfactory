@@ -1,4 +1,5 @@
 import { Brand } from "@/components/brand";
+import { urlFor } from "@/lib/site-url";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "로그인" };
@@ -13,6 +14,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const sp = await searchParams;
   const next = typeof sp.next === "string" ? sp.next : "/";
   const reason = typeof sp.reason === "string" ? sp.reason : undefined;
+  const shopLogin = await urlFor("shop", "/login");
 
   return (
     <main className="grid min-h-svh grid-cols-1 lg:grid-cols-[5fr_7fr]">
@@ -55,7 +57,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             <LoginForm next={next} />
           </div>
           <p className="mt-8 text-xs text-steel">비밀번호를 잊었으면 관리자가 사용자 관리에서 임시 비밀번호를 다시 발급합니다.</p>
-          <a href="/shop/login" className="mt-3 inline-block text-xs text-steel underline underline-offset-2">거래처이신가요? 부품 주문 화면으로</a>
+          <a href={shopLogin} className="mt-3 inline-block text-xs text-steel underline underline-offset-2">거래처이신가요? 부품 주문 화면으로</a>
         </div>
       </section>
     </main>

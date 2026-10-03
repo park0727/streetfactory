@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/page-header";
 
 /** 거래처에게 보낼 주문 화면 주소와 휴대폰 홈 화면 추가 방법 */
-export function InstallGuide({ origin }: { origin: string }) {
-  const url = `${origin}/shop`;
+export function InstallGuide({ shopUrl }: { shopUrl: string }) {
+  const url = shopUrl;
   const msg = `[라이더매니아 부품 주문]\n아래 주소에서 발급받은 계정으로 로그인하면 부품을 주문할 수 있습니다.\n${url}\n\n휴대폰 홈 화면에 추가하면 앱처럼 쓸 수 있어요.\n· 아이폰: 사파리에서 열고 아래쪽 공유 버튼 → '홈 화면에 추가'\n· 안드로이드: 크롬에서 열고 오른쪽 위 ⋮ → '홈 화면에 추가'`;
   return (
     <Panel className="h-fit space-y-3 p-5">
@@ -18,7 +18,7 @@ export function InstallGuide({ origin }: { origin: string }) {
           <Copy /> 안내 문구 복사
         </Button>
         <Button size="sm" variant="outline" asChild>
-          <a href="/shop/login" target="_blank" rel="noopener">
+          <a href={`${shopUrl}login`} target="_blank" rel="noopener">
             <ExternalLink /> 주문 화면 열어 보기
           </a>
         </Button>

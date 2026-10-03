@@ -30,7 +30,6 @@ npm run preview      # Workers 런타임으로 로컬 실행
 인증은 Supabase 전용이라 화면 E2E 는 실제 Supabase 프로젝트가 필요하다.
 
 ## 배포 환경 메모
-- 공식 주소는 `ridermania.co.kr` (Workers Custom Domain). www·workers.dev·http 는 `src/proxy.ts` 가 301 로 옮긴다.
 - 한국에서 workers.dev 로 접속하면 요청이 LAX(미국) PoP 로 들어오는 경우가 있다. Smart Placement(`placement.mode: smart`) 와 Hyperdrive 로 DB 왕복을 줄였다. 응답 1~1.5초 수준이면 정상.
 - Worker 번들은 gzip 약 4MB. 무료 플랜 한도 근처이므로 서버 번들에 큰 라이브러리를 추가하지 않는다 (exceljs·recharts 는 클라이언트 전용).
 
@@ -84,9 +83,16 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 - **단일 테이블 select 안의 상관 서브쿼리**에서 바깥 컬럼은 `${table.col}` 대신 `sales_orders.id` 처럼 테이블명을 직접 쓴다. drizzle 이 조인 없는 select 의 컬럼을 `"id"` 로만 렌더링해 서브쿼리의 같은 이름 컬럼을 가리키는 버그가 있었다.
 - 목록 필터는 URL 쿼리(`useUrlFilters`, `useDebouncedParam`) 로. 서버 페이지가 `searchParams` 를 읽어 쿼리한다.
 - 엑셀 다운로드 = `/<route>/export` 라우트 핸들러(JSON) + 클라이언트 `downloadXlsx`. 업로드 = 클라이언트 `readXlsx` → 서버 검증 액션 → 미리보기 → 저장 액션.
-- 화면 검증: 로컬 Postgres `streetfactory_test` 에 `scripts/seed-sample.mjs` 로 샘플을 넣고 `DATABASE_URL=postgresql://localhost:5432/streetfactory_test npm run dev` 로 띄운다. 운영 DB 에는 샘플을 넣지 않는다.
+- 화면 검증: 로컬 Postgres `streetfactory_test` 에 `scripts/seed-sample.mjs` 로 샘플을 넣고 `DATABASE_URL=postgresql://localhost:5432/streetfactory_test npm run dev` 로 띄우고 admin.localhost / shop.localhost 로 접속한다. 운영 DB 에는 샘플을 넣지 않는다.
 
 ## 접속 주소·배포
+- 주소별 화면 (Workers Custom Domain, workers.dev 는 꺼 둠). 구분은 `src/lib/site.ts`, 라우팅은 `src/proxy.ts`.
+  - `ridermania.co.kr` 회사 소개(`src/app/intro`, 로그인 없음). 다른 경로는 shop./admin. 으로 보낸다. www·http 는 여기로.
+  - `shop.ridermania.co.kr` 거래처 주문. 보이는 주소 `/cart` 를 내부 경로 `/shop/cart` 로 rewrite. **주문 화면 안 링크·redirect 는 `/shop` 없이** 쓴다 (`/shop/...` 로 오면 308 로 벗긴다).
+  - `admin.ridermania.co.kr` 관리자. `/shop/*` 은 shop. 으로 보낸다.
+  - 다른 화면으로 가는 링크는 서버에서 `urlFor(site, path)`(`src/lib/site-url.ts`) 로 절대 주소를 만들고 `<a>` 를 쓴다 (`<Link>` 아님).
+  - 로그인 쿠키는 주소마다 따로라 직원·거래처 세션이 섞이지 않는다.
+- 로컬도 같은 규칙: `http://localhost:3000`(소개), `http://shop.localhost:3000`, `http://admin.localhost:3000`.
 - 앱 Worker 이름은 `ridermania` (`wrangler.jsonc`). 옛 `streetfactory` Worker 는 301 리다이렉트 전용이다. 거기에 앱을 다시 배포하지 않는다.
 - 프로덕션 비밀값: DATABASE_URL, SUPABASE_SECRET_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, VAPID_PRIVATE_KEY.
 - 이미지 업로드 버킷은 `scripts/setup-storage.mjs` 로 만든다.

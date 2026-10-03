@@ -11,7 +11,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const settings = await getShopSettings();
   if (me.mustChangePassword) {
     const path = (await headers()).get("x-pathname") ?? "";
-    if (!path.startsWith("/shop/account")) redirect("/shop/account?pw=1");
+    if (!path.startsWith("/shop/account")) redirect("/account?pw=1");
   }
   return (
     <CartProvider customerId={me.id}>

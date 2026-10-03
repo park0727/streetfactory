@@ -47,7 +47,7 @@ function useEnv() {
 }
 
 const APPS = {
-  shop: { sw: "/shop-sw.js", scope: "/shop", path: "/shop", name: "라이더매니아", what: "주문 화면" },
+  shop: { sw: "/shop-sw.js", scope: "/", path: "/", name: "라이더매니아", what: "주문 화면" },
   admin: { sw: "/admin-sw.js", scope: "/", path: "/", name: "RM 관리", what: "관리자 화면" },
 } as const;
 type App = keyof typeof APPS;

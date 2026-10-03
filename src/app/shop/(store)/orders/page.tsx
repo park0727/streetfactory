@@ -39,7 +39,7 @@ export default async function MyOrdersPage() {
             const total = r.vatApplied ? Math.round(s * 1.1) : s;
             return (
               <li key={r.id}>
-                <Link href={`/shop/orders/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40">
+                <Link href={`/orders/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="code text-[12.5px]">{r.orderNo}</span>

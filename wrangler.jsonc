@@ -12,12 +12,15 @@
     { "binding": "WORKER_SELF_REFERENCE", "service": "ridermania" }
   ],
   "observability": { "enabled": true },
-  // 공식 주소. www 와 workers.dev 주소는 src/proxy.ts 에서 ridermania.co.kr 로 보낸다.
-  // workers.dev 주소는 켜 두되, proxy 가 ridermania.co.kr 로 보낸다 (예전 링크 보호)
-  "workers_dev": true,
+  // 주소별 화면은 src/proxy.ts + src/lib/site.ts: 홈(회사 소개) / shop.(거래처 주문) / admin.(관리자). www 는 홈으로.
+  // workers.dev 주소는 쓰지 않는다. 접속은 아래 도메인만.
+  "workers_dev": false,
+  "preview_urls": false,
   "routes": [
     { "pattern": "ridermania.co.kr", "custom_domain": true },
-    { "pattern": "www.ridermania.co.kr", "custom_domain": true }
+    { "pattern": "www.ridermania.co.kr", "custom_domain": true },
+    { "pattern": "shop.ridermania.co.kr", "custom_domain": true },
+    { "pattern": "admin.ridermania.co.kr", "custom_domain": true }
   ],
   // DB(서울) 근처에서 Worker 를 실행하도록 배치 (요청이 먼 PoP 로 들어와도 DB 왕복이 짧아진다)
   "placement": { "mode": "smart" },

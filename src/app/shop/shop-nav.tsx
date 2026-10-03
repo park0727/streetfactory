@@ -6,12 +6,16 @@ import { cn } from "@/lib/utils";
 import { useCart } from "./cart-context";
 
 const TABS = [
-  { href: "/shop", label: "상품", icon: PackageSearch },
-  { href: "/shop/cart", label: "장바구니", icon: ShoppingCart },
-  { href: "/shop/orders", label: "주문 내역", icon: ClipboardList },
-  { href: "/shop/account", label: "내 정보", icon: UserRound },
+  { href: "/", label: "상품", icon: PackageSearch },
+  { href: "/cart", label: "장바구니", icon: ShoppingCart },
+  { href: "/orders", label: "주문 내역", icon: ClipboardList },
+  { href: "/account", label: "내 정보", icon: UserRound },
 ];
-const active = (p: string, href: string) => (href === "/shop" ? p === "/shop" : p.startsWith(href));
+// 주문 화면은 shop. 주소에서 /shop 을 뺀 경로로 보인다 (src/proxy.ts). 내부 경로가 와도 같게 본다.
+const active = (path: string, href: string) => {
+  const p = path.replace(/^\/shop(?=\/|$)/, "") || "/";
+  return href === "/" ? p === "/" : p.startsWith(href);
+};
 
 export function ShopTopNav() {
   const pathname = usePathname();
@@ -26,7 +30,7 @@ export function ShopTopNav() {
         >
           <t.icon className="size-4" strokeWidth={1.75} />
           {t.label}
-          {t.href === "/shop/cart" && count > 0 && <span className="ml-0.5 rounded-full bg-signal px-1.5 text-[11px] font-semibold text-white">{count}</span>}
+          {t.href === "/cart" && count > 0 && <span className="ml-0.5 rounded-full bg-signal px-1.5 text-[11px] font-semibold text-white">{count}</span>}
         </Link>
       ))}
     </nav>
@@ -45,7 +49,7 @@ export function ShopBottomTabs() {
             {on && <span aria-hidden className="absolute inset-x-6 top-0 h-[2px] rounded-b bg-signal" />}
             <span className="relative">
               <t.icon className="size-5" strokeWidth={1.75} />
-              {t.href === "/shop/cart" && count > 0 && <span className="absolute -top-1.5 -right-2.5 min-w-4 rounded-full bg-signal px-1 text-center text-[10px] font-semibold leading-4 text-white">{count}</span>}
+              {t.href === "/cart" && count > 0 && <span className="absolute -top-1.5 -right-2.5 min-w-4 rounded-full bg-signal px-1 text-center text-[10px] font-semibold leading-4 text-white">{count}</span>}
             </span>
             {t.label}
           </Link>

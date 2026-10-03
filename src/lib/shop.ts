@@ -57,7 +57,7 @@ export const getCustomer = cache(async (): Promise<Customer | null> => {
 
 export async function requireCustomer(): Promise<Customer> {
   const c = await getCustomer();
-  if (!c) redirect("/shop/login");
+  if (!c) redirect("/login"); // shop. 주소의 거래처 로그인
   return c;
 }
 
