@@ -38,7 +38,6 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
   const supply = lines.reduce((a, l) => a + l.qty * l.unitPrice, 0);
   const vat = o.vatApplied ? Math.round(supply * 0.1) : 0;
   const total = supply + vat;
-  const account = [settings?.bankName, settings?.bankAccount].filter(Boolean).join(" ");
 
   return (
     <div className="space-y-4">
@@ -55,38 +54,43 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
           {settings?.orderNotice && <p className="mt-1.5 text-[13.5px] whitespace-pre-line">{settings.orderNotice}</p>}
         </div>
       )}
-      {done && <ContactCall phone={settings?.phone} variant="card" />}
-
       {o.status === "pending" && (
-        <section className="rounded-md border-2 border-primary/80 bg-card p-4">
-          <p className="th-label">입금 안내</p>
-          <p className="tabular mt-1 text-[26px] font-semibold leading-tight">{krw(total)}</p>
-          <p className="text-[12.5px] text-steel">{o.vatApplied ? "부가세 포함 금액" : "부가세 별도 청구 없음"}</p>
-          {account ? (
-            <dl className="mt-3 space-y-1.5 text-[14px]">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-steel">입금 계좌</dt>
-                <dd className="flex items-center gap-1 text-right font-medium">
-                  <span className="tabular">{account}</span>
-                  {settings?.bankAccount && <CopyButton text={settings.bankAccount} label="계좌번호 복사" />}
-                </dd>
-              </div>
-              {settings?.bankHolder && (
-                <div className="flex justify-between gap-3">
-                  <dt className="text-steel">예금주</dt>
-                  <dd className="font-medium">{settings.bankHolder}</dd>
-                </div>
-              )}
-              <div className="flex justify-between gap-3">
-                <dt className="text-steel">입금자명</dt>
-                <dd className="font-medium">{me.partnerName}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="mt-3 text-[13px] text-steel">입금 계좌는 담당자가 별도로 안내해 드립니다.</p>
-          )}
+        <section className="overflow-hidden rounded-md border-2 border-primary/80 bg-card">
+          <p className="bg-primary px-4 py-2 text-[14px] font-semibold text-primary-foreground">{settings?.bankAccount ? "아래 계좌로 입금해 주세요" : "입금 안내"}</p>
+          <div className="space-y-3 p-4">
+            <Row label="입금하실 금액">
+              <span className="tabular text-[24px] font-semibold leading-tight">{krw(total)}</span>
+              <CopyButton text={String(total)} label="입금 금액 복사" done="금액을 복사했습니다." />
+            </Row>
+            <p className="-mt-2 text-[12px] text-steel">{o.vatApplied ? "부가세 포함 금액" : "부가세 별도 청구 없음"}</p>
+            {settings?.bankAccount ? (
+              <>
+                {settings.bankName && (
+                  <Row label="은행">
+                    <span className="text-[16px] font-semibold">{settings.bankName}</span>
+                  </Row>
+                )}
+                <Row label="계좌번호" nowrap>
+                  <span className="tabular min-w-0 text-[17px] font-semibold break-all">{settings.bankAccount}</span>
+                  <CopyButton text={settings.bankAccount} label="계좌번호 복사" done="계좌번호를 복사했습니다. 은행 앱에 붙여넣어 주세요." />
+                </Row>
+                {settings.bankHolder && (
+                  <Row label="예금주">
+                    <span className="text-[16px] font-semibold">{settings.bankHolder}</span>
+                  </Row>
+                )}
+                <Row label="입금자명">
+                  <span className="text-[15px] font-medium">{me.partnerName}</span>
+                </Row>
+                <p className="rounded-md bg-muted px-3 py-2 text-[12.5px] text-steel">입금자명을 거래처 이름({me.partnerName})으로 해 주시면 확인이 빠릅니다.</p>
+              </>
+            ) : (
+              <p className="rounded-md bg-muted px-3 py-2 text-[13px]">입금 계좌는 전화로 안내해 드립니다. 아래 전화 버튼을 눌러 주세요.</p>
+            )}
+          </div>
         </section>
       )}
+      {(done || (o.status === "pending" && !settings?.bankAccount)) && <ContactCall phone={settings?.phone} variant="card" />}
 
       <section className="rounded-md border bg-card">
         <header className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
@@ -133,6 +137,15 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+function Row({ label, children, nowrap }: { label: string; children: React.ReactNode; nowrap?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-[76px] shrink-0 text-[13px] text-steel">{label}</span>
+      <div className={`flex min-w-0 flex-1 items-center justify-between gap-2 ${nowrap ? "" : "flex-wrap"}`}>{children}</div>
     </div>
   );
 }

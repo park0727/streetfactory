@@ -1,5 +1,6 @@
 "use client";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,24 +24,44 @@ function F({ id, label, hint, children, className = "" }: { id: string; label: s
 export function ShopSettingsForm({ s }: { s: ShopSettings | null }) {
   const [state, action, pending] = useActionState(saveShopSettings, undefined);
   useActionToast(state);
+  const [bank, setBank] = useState({ name: s?.bankName ?? "", account: s?.bankAccount ?? "", holder: s?.bankHolder ?? "" });
   return (
     <form action={action} className="space-y-4">
       <Panel className="p-5">
-        <p className="mb-3 text-[14px] font-semibold">입금 안내</p>
+        <p className="text-[14px] font-semibold">입금 계좌</p>
+        <p className="mt-0.5 mb-3 text-[12.5px] text-steel">거래처가 주문을 마치면 이 계좌가 바로 보입니다. 계좌번호는 &lsquo;복사&rsquo; 버튼으로 은행 앱에 붙여넣을 수 있습니다.</p>
+        {!bank.account.trim() && (
+          <p className="mb-3 flex items-start gap-2 rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-[13px]">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-warn" />
+            계좌번호가 비어 있어 지금은 거래처에게 &lsquo;입금 계좌는 전화로 안내해 드립니다&rsquo;라고 나옵니다.
+          </p>
+        )}
         <div className="grid gap-3 sm:grid-cols-3">
           <F id="ss-bank" label="은행">
-            <Input id="ss-bank" name="bankName" defaultValue={s?.bankName ?? ""} placeholder="예: 국민은행" />
+            <Input id="ss-bank" name="bankName" value={bank.name} onChange={(e) => setBank({ ...bank, name: e.target.value })} placeholder="예: 국민은행" />
           </F>
           <F id="ss-acc" label="계좌번호">
-            <Input id="ss-acc" name="bankAccount" defaultValue={s?.bankAccount ?? ""} placeholder="123456-78-901234" inputMode="numeric" />
+            <Input id="ss-acc" name="bankAccount" value={bank.account} onChange={(e) => setBank({ ...bank, account: e.target.value })} placeholder="예: 123456-78-901234" inputMode="numeric" />
           </F>
           <F id="ss-holder" label="예금주">
-            <Input id="ss-holder" name="bankHolder" defaultValue={s?.bankHolder ?? ""} />
-          </F>
-          <F id="ss-onotice" label="주문 완료 안내문" className="sm:col-span-3" hint="주문 직후 화면 맨 위에 보입니다. 입금 기한, 출고 시간 등을 적어 두세요.">
-            <Textarea id="ss-onotice" name="orderNotice" defaultValue={s?.orderNotice ?? ""} rows={3} maxLength={1000} />
+            <Input id="ss-holder" name="bankHolder" value={bank.holder} onChange={(e) => setBank({ ...bank, holder: e.target.value })} placeholder="예: 라이더매니아" />
           </F>
         </div>
+        {bank.account.trim() && (
+          <div className="mt-4 max-w-sm overflow-hidden rounded-md border-2 border-primary/80">
+            <p className="bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-foreground">거래처 화면 미리보기 · 아래 계좌로 입금해 주세요</p>
+            <dl className="space-y-1 px-3 py-2.5 text-[13.5px]">
+              {bank.name.trim() && <div className="flex gap-3"><dt className="w-16 text-steel">은행</dt><dd className="font-semibold">{bank.name}</dd></div>}
+              <div className="flex gap-3"><dt className="w-16 text-steel">계좌번호</dt><dd className="tabular font-semibold tracking-wide">{bank.account}</dd></div>
+              {bank.holder.trim() && <div className="flex gap-3"><dt className="w-16 text-steel">예금주</dt><dd className="font-semibold">{bank.holder}</dd></div>}
+            </dl>
+          </div>
+        )}
+      </Panel>
+      <Panel className="p-5">
+        <F id="ss-onotice" label="주문 완료 안내문" hint="주문 직후 화면 맨 위에 보입니다. 입금 기한, 출고 시간 등을 적어 두세요.">
+          <Textarea id="ss-onotice" name="orderNotice" defaultValue={s?.orderNotice ?? ""} rows={3} maxLength={1000} />
+        </F>
       </Panel>
       <Panel className="p-5">
         <p className="mb-3 text-[14px] font-semibold">상품 화면 공지</p>
