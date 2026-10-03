@@ -10,9 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EmptyState } from "@/components/page-header";
 import { PartStatusBadge } from "@/components/status-badge";
 import { krw, num } from "@/lib/format";
-import { PartDialog, type PartRow, type Cat, type Sup } from "./part-dialog";
+import { PartDialog, type PartRow, type Cat, type Sup, type BrandOpt } from "./part-dialog";
 
-type Props = { rows: (PartRow & { categoryName: string; supplierName: string | null })[]; cats: Cat[]; sups: Sup[] };
+type Props = { rows: (PartRow & { categoryName: string; supplierName: string | null; brandName: string | null })[]; cats: Cat[]; sups: Sup[]; brands: BrandOpt[] };
 
 function OnlineSwitch({ id, name, on, disabled }: { id: number; name: string; on: boolean; disabled?: boolean }) {
   const router = useRouter();
@@ -59,7 +59,7 @@ export function BulkOnline({ ids }: { ids: number[] }) {
   );
 }
 
-export function PartsTable({ rows, cats, sups }: Props) {
+export function PartsTable({ rows, cats, sups, brands }: Props) {
   const [editing, setEditing] = useState<PartRow | null>(null);
   return (
     <>
@@ -73,6 +73,7 @@ export function PartsTable({ rows, cats, sups }: Props) {
             <TableHead className="th-label w-[90px]">제조사</TableHead>
             <TableHead className="th-label w-[110px] text-right">표준원가</TableHead>
             <TableHead className="th-label w-[110px] text-right">소비자가</TableHead>
+            <TableHead className="th-label w-[100px] text-right">온라인가</TableHead>
             <TableHead className="th-label w-[100px] text-right">도매가</TableHead>
             <TableHead className="th-label w-[70px] text-right">안전재고</TableHead>
             <TableHead className="th-label w-[90px]">상태</TableHead>
@@ -83,7 +84,7 @@ export function PartsTable({ rows, cats, sups }: Props) {
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={12} className="p-0">
+              <TableCell colSpan={13} className="p-0">
                 <EmptyState title="조건에 맞는 부품이 없습니다" hint="검색어나 필터를 바꾸거나 새 부품을 등록하세요." />
               </TableCell>
             </TableRow>
@@ -91,12 +92,17 @@ export function PartsTable({ rows, cats, sups }: Props) {
           {rows.map((r) => (
             <TableRow key={r.id} className={r.status === "discontinued" ? "text-steel" : ""}>
               <TableCell className="code">{r.code}</TableCell>
-              <TableCell className="font-medium">{r.name}</TableCell>
+              <TableCell className="font-medium">
+                {r.tireSize && <span className="tabular mr-1.5 font-semibold">{r.tireSize}</span>}
+                {r.name}
+                {r.brandName && <span className="ml-1.5 text-[11.5px] font-normal text-steel">{r.brandName}</span>}
+              </TableCell>
               <TableCell className="max-w-[260px] truncate text-steel" title={r.spec ?? ""}>{r.spec ?? "—"}</TableCell>
               <TableCell>{r.categoryName}</TableCell>
               <TableCell>{r.manufacturer ?? "—"}</TableCell>
               <TableCell className="tabular text-right">{krw(r.standardCost)}</TableCell>
               <TableCell className="tabular text-right">{krw(r.retailPrice)}</TableCell>
+              <TableCell className="tabular text-right text-steel">{r.onlinePrice > 0 ? krw(r.onlinePrice) : "—"}</TableCell>
               <TableCell className="tabular text-right text-steel">{r.wholesalePrice > 0 ? krw(r.wholesalePrice) : "—"}</TableCell>
               <TableCell className="tabular text-right">{num(r.safetyStock)}</TableCell>
               <TableCell><PartStatusBadge status={r.status} /></TableCell>
@@ -110,19 +116,19 @@ export function PartsTable({ rows, cats, sups }: Props) {
           ))}
         </TableBody>
       </Table>
-      <PartDialog open={editing !== null} onClose={() => setEditing(null)} part={editing} cats={cats} sups={sups} />
+      <PartDialog key={editing?.id ?? "closed"} open={editing !== null} onClose={() => setEditing(null)} part={editing} cats={cats} sups={sups} brands={brands} />
     </>
   );
 }
 
-export function NewPartButton({ cats, sups, children }: { cats: Cat[]; sups: Sup[]; children: ReactNode }) {
+export function NewPartButton({ cats, sups, brands, children }: { cats: Cat[]; sups: Sup[]; brands: BrandOpt[]; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)}>
         {children}
       </Button>
-      <PartDialog open={open} onClose={() => setOpen(false)} part={null} cats={cats} sups={sups} />
+      <PartDialog open={open} onClose={() => setOpen(false)} part={null} cats={cats} sups={sups} brands={brands} />
     </>
   );
 }

@@ -1,6 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { notifyStaff } from "@/lib/push-notify";
+import { shown } from "@/lib/pricing";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -8,7 +11,8 @@ import { customerAccounts, parts, profiles, vAvailable, webOrderLines, webOrders
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { requireCustomer } from "@/lib/shop";
-import { availability, priceFor, type Availability } from "@/lib/pricing";
+import { availability, quotePart, type Availability, type RuleTier } from "@/lib/pricing";
+import { loadActiveRules } from "@/lib/discounts";
 import { firstIssue, type ActionResult } from "@/lib/action-result";
 import { todayKST } from "@/lib/dates";
 import { nextDocNo } from "../(app)/entry/sale-core";
@@ -44,31 +48,53 @@ export async function shopLogout() {
   redirect("/shop/login");
 }
 
+// 가격 계산에 필요한 부품 컬럼
+const PRICE_COLS = { id: parts.id, categoryId: parts.categoryId, brandId: parts.brandId, retailPrice: parts.retailPrice, wholesalePrice: parts.wholesalePrice, onlinePrice: parts.onlinePrice };
+
 // ---------- 장바구니 견적 ----------
-export type QuoteLine = { partId: number; code: string; name: string; spec: string | null; price: number; availability: Availability; orderable: boolean; ok: boolean };
+export type QuoteLine = {
+  partId: number;
+  code: string;
+  name: string;
+  spec: string | null;
+  price: number; // 이 수량에서의 판매가 (공급가)
+  list: number; // 정가 (공급가)
+  rate: number; // 적용 할인율
+  nextTier: RuleTier | null;
+  availability: Availability;
+  orderable: boolean;
+  ok: boolean;
+};
 
 /** 장바구니 수량을 현재 가격·가용재고로 확인한다. 실제 재고 수량은 돌려주지 않는다. */
 export async function quoteCart(items: { partId: number; qty: number }[]): Promise<QuoteLine[]> {
   const me = await requireCustomer();
   const ids = [...new Set(items.map((i) => i.partId))].filter((n) => Number.isInteger(n) && n > 0).slice(0, 100);
   if (ids.length === 0) return [];
-  const rows = await db
-    .select({ id: parts.id, code: parts.code, name: parts.name, spec: parts.spec, retailPrice: parts.retailPrice, wholesalePrice: parts.wholesalePrice, online: parts.online, status: parts.status, available: vAvailable.available })
-    .from(parts)
-    .innerJoin(vAvailable, eq(vAvailable.partId, parts.id))
-    .where(inArray(parts.id, ids));
+  const [rows, rules] = await Promise.all([
+    db
+      .select({ ...PRICE_COLS, code: parts.code, name: parts.name, spec: parts.spec, online: parts.online, status: parts.status, available: vAvailable.available })
+      .from(parts)
+      .innerJoin(vAvailable, eq(vAvailable.partId, parts.id))
+      .where(inArray(parts.id, ids)),
+    loadActiveRules(),
+  ]);
   const map = new Map(rows.map((r) => [r.id, r]));
   return items
     .filter((i) => map.has(i.partId))
     .map((i) => {
       const r = map.get(i.partId)!;
       const orderable = r.online && r.status === "active";
+      const q = quotePart(r, me, rules, i.qty);
       return {
         partId: r.id,
         code: r.code,
         name: r.name,
         spec: r.spec,
-        price: priceFor(r, me),
+        price: q.unit,
+        list: q.list,
+        rate: q.rate,
+        nextTier: q.nextTier,
         availability: availability(orderable ? r.available : 0, r.status),
         orderable,
         ok: orderable && i.qty <= r.available,
@@ -93,12 +119,13 @@ export async function placeOrder(input: z.infer<typeof orderSchema>): Promise<Ac
   const need = new Map<number, number>();
   for (const l of r.data.lines) need.set(l.partId, (need.get(l.partId) ?? 0) + l.qty);
 
+  const rules = await loadActiveRules();
   try {
     const result = await db.transaction(async (tx) => {
       // 주문끼리 가용재고를 동시에 잡지 않도록 직렬화
       await tx.execute(sql`select pg_advisory_xact_lock(7340001)`);
       const rows = await tx
-        .select({ id: parts.id, code: parts.code, name: parts.name, retailPrice: parts.retailPrice, wholesalePrice: parts.wholesalePrice, online: parts.online, status: parts.status, available: vAvailable.available })
+        .select({ ...PRICE_COLS, code: parts.code, name: parts.name, online: parts.online, status: parts.status, available: vAvailable.available })
         .from(parts)
         .innerJoin(vAvailable, eq(vAvailable.partId, parts.id))
         .where(inArray(parts.id, [...need.keys()]));
@@ -116,12 +143,25 @@ export async function placeOrder(input: z.infer<typeof orderSchema>): Promise<Ac
         .insert(webOrders)
         .values({ orderNo, partnerId: me.partnerId, customerId: me.id, vatApplied: me.vatApplied, memo: r.data.memo ?? null })
         .returning({ id: webOrders.id });
-      await tx.insert(webOrderLines).values([...need].map(([partId, qty], i) => ({ orderId: o.id, lineNo: i + 1, partId, qty, unitPrice: priceFor(map.get(partId)!, me) })));
-      return { id: o.id, orderNo };
+      await tx.insert(webOrderLines).values([...need].map(([partId, qty], i) => ({ orderId: o.id, lineNo: i + 1, partId, qty, unitPrice: quotePart(map.get(partId)!, me, rules, qty).unit })));
+      const supply = [...need].reduce((a, [partId, qty]) => a + qty * quotePart(map.get(partId)!, me, rules, qty).unit, 0);
+      return { id: o.id, orderNo, total: shown(supply, me.vatApplied), items: need.size };
     });
     revalidatePath("/shop/orders");
     revalidatePath("/orders");
-    return { ok: true, message: `${result.orderNo} 주문이 접수되었습니다.`, data: result };
+    after(async () => {
+      try {
+        await notifyStaff({
+          title: `새 온라인 주문 · ${me.partnerName}`,
+          body: `${result.orderNo} · ${result.items}개 품목 · ₩${result.total.toLocaleString("ko-KR")}`,
+          url: `/orders/${result.id}`,
+          tag: result.orderNo,
+        });
+      } catch (e) {
+        console.error("[push] 주문 알림 실패", e);
+      }
+    });
+    return { ok: true, message: `${result.orderNo} 주문이 접수되었습니다.`, data: { id: result.id, orderNo: result.orderNo } };
   } catch (e) {
     if (e instanceof OrderError) return { ok: false, error: e.message };
     throw e;

@@ -36,7 +36,7 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
   // 견적의 price 는 공급가. 화면에는 부가세 포함가로 보여준다
   const lines = items.map((i) => {
     const q = quote.get(i.partId);
-    return { ...i, supplyPrice: q?.price, price: q ? shown(q.price, vatApplied) : i.price, q };
+    return { ...i, supplyPrice: q?.price, price: q ? shown(q.price, vatApplied) : i.price, listShown: q ? shown(q.list, vatApplied) : null, q };
   });
   const supply = lines.reduce((a, l) => a + l.qty * (l.supplyPrice ?? l.price), 0);
   const vat = vatApplied ? Math.round(supply * 0.1) : 0;
@@ -113,6 +113,12 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
                   <span className="font-semibold">{krw(l.price * l.qty)}</span>
                 </p>
               </div>
+              {l.q && l.q.rate > 0 && l.listShown && l.listShown > l.price && (
+                <p className="mt-1 text-[12px] text-status-critical">
+                  <span className="text-steel line-through">{krw(l.listShown)}</span> → {krw(l.price)} ({Math.round((1 - l.price / l.listShown) * 100)}% 할인 적용)
+                </p>
+              )}
+              {l.q?.nextTier && l.q.ok && <p className="mt-0.5 text-[12px] text-primary">{l.q.nextTier.minQty}개 이상이면 {l.q.nextTier.rate}% 할인 ({l.q.nextTier.minQty - l.qty}개 더)</p>}
               {bad && <p className="mt-1.5 text-[12.5px] text-status-critical">{l.q!.orderable ? "주문 가능 수량을 초과했습니다. 수량을 줄여 주세요." : "지금 주문할 수 없는 상품입니다. 삭제해 주세요."}</p>}
             </li>
           );

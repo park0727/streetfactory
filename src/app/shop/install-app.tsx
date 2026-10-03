@@ -46,17 +46,23 @@ function useEnv() {
   );
 }
 
+const APPS = {
+  shop: { sw: "/shop-sw.js", scope: "/shop", path: "/shop", name: "라이더매니아", what: "주문 화면" },
+  admin: { sw: "/admin-sw.js", scope: "/", path: "/", name: "RM 관리", what: "관리자 화면" },
+} as const;
+type App = keyof typeof APPS;
+
 /** 서비스 워커 등록 (안드로이드 설치 조건) */
-function useRegisterSW() {
+function useRegisterSW(app: App) {
   useEffect(() => {
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/shop-sw.js", { scope: "/shop" }).catch(() => {});
-  }, []);
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register(APPS[app].sw, { scope: APPS[app].scope }).catch(() => {});
+  }, [app]);
 }
 
-function openInBrowser(env: Env) {
-  const url = window.location.origin + "/shop";
+function openInBrowser(env: Env, app: App) {
+  const url = window.location.origin + APPS[app].path;
   if (env === "inapp-android") {
-    window.location.href = `intent://${window.location.host}/shop#Intent;scheme=https;package=com.android.chrome;end`;
+    window.location.href = `intent://${window.location.host}${APPS[app].path}#Intent;scheme=https;package=com.android.chrome;end`;
   } else if (/KAKAOTALK/i.test(navigator.userAgent)) {
     window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(url)}`;
   } else {
@@ -65,8 +71,9 @@ function openInBrowser(env: Env) {
 }
 
 /** 홈 화면 추가 버튼. variant=banner 는 상품 화면 상단용 (닫으면 7일간 숨김) */
-export function InstallApp({ variant = "button", className }: { variant?: "button" | "banner"; className?: string }) {
-  useRegisterSW();
+export function InstallApp({ variant = "button", className, app = "shop" }: { variant?: "button" | "banner"; className?: string; app?: App }) {
+  useRegisterSW(app);
+  const cfg = APPS[app];
   const env = useEnv();
   const canPrompt = useSyncExternalStore(subscribe, () => deferred !== null, () => false);
   const [guide, setGuide] = useState(false);
@@ -137,12 +144,12 @@ export function InstallApp({ variant = "button", className }: { variant?: "butto
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>홈 화면에 추가하기</DialogTitle>
-            <DialogDescription>한 번만 해 두면 다음부터 아이콘을 눌러 바로 주문 화면이 열립니다.</DialogDescription>
+            <DialogDescription>한 번만 해 두면 다음부터 아이콘을 눌러 바로 {cfg.what}이 열립니다.</DialogDescription>
           </DialogHeader>
           {env === "inapp-android" || env === "inapp-ios" ? (
             <div className="space-y-3 text-[14px]">
               <p>지금은 카카오톡 같은 앱 안에서 열려 있어서 홈 화면에 추가할 수 없습니다. 아래 버튼을 눌러 {env === "inapp-ios" ? "사파리" : "크롬"}에서 다시 열어 주세요.</p>
-              <Button className="h-11 w-full" onClick={() => openInBrowser(env)}>
+              <Button className="h-11 w-full" onClick={() => openInBrowser(env, app)}>
                 <ExternalLink /> {env === "inapp-ios" ? "사파리로 열기" : "크롬으로 열기"}
               </Button>
               <p className="text-[12.5px] text-steel">열린 뒤 다시 로그인하고 &lsquo;홈 화면에 추가&rsquo; 버튼을 누르면 됩니다.</p>
@@ -164,7 +171,7 @@ export function InstallApp({ variant = "button", className }: { variant?: "butto
               <li className="flex gap-3">
                 <Step n={3} />
                 <span>
-                  오른쪽 위 <b>&lsquo;추가&rsquo;</b>를 누르면 홈 화면에 <b>라이더매니아</b> 아이콘이 생깁니다.
+                  오른쪽 위 <b>&lsquo;추가&rsquo;</b>를 누르면 홈 화면에 <b>{cfg.name}</b> 아이콘이 생깁니다.
                 </span>
               </li>
               <li className="rounded-md bg-muted px-3 py-2 text-[12.5px] text-steel">공유 버튼이 안 보이면 화면을 살짝 위로 밀어 보세요. 사파리가 아닌 다른 앱이면 사파리로 열어 주세요.</li>
@@ -200,4 +207,9 @@ export function InstallApp({ variant = "button", className }: { variant?: "butto
 
 function Step({ n }: { n: number }) {
   return <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-[12px] font-semibold text-primary-foreground">{n}</span>;
+}
+
+/** 홈 화면 앱으로 열려 있는지, 아이폰인지 (푸시 안내용) */
+export function useInstallEnv() {
+  return useEnv();
 }

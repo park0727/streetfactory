@@ -1,8 +1,11 @@
-import { and, asc, count, eq, ilike, ne, or, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, ilike, ne, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, parts, vAvailable } from "@/db/schema";
+import { banners, brands, categories, parts, vAvailable } from "@/db/schema";
+import { todayKST } from "@/lib/dates";
+import { BannerCarousel } from "../banner-carousel";
+import { loadActiveRules } from "@/lib/discounts";
 import { getShopSettings, requireCustomer } from "@/lib/shop";
-import { availability, priceFor, shown } from "@/lib/pricing";
+import { availability, quotePart, shown } from "@/lib/pricing";
 import { int, str } from "@/lib/query-params";
 import { CatalogFilters } from "./catalog-filters";
 import { ProductRow } from "./product-row";
@@ -21,11 +24,25 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const limit = int(sp, "n", PAGE);
 
   const conds: SQL[] = [eq(parts.online, true), ne(parts.status, "discontinued")];
-  if (q) conds.push(or(ilike(parts.code, `%${q}%`), ilike(parts.name, `%${q}%`), ilike(parts.spec, `%${q}%`), ilike(parts.manufacturer, `%${q}%`))!);
+  if (q) {
+    // 사이즈는 130/70-13, 130-70-13, 1307013 어느 형태로 쳐도 찾히게 숫자만 비교
+    const digits = q.replace(/\D/g, "");
+    conds.push(
+      or(
+        ilike(parts.code, `%${q}%`),
+        ilike(parts.name, `%${q}%`),
+        ilike(parts.spec, `%${q}%`),
+        ilike(parts.manufacturer, `%${q}%`),
+        ilike(brands.name, `%${q}%`),
+        ilike(parts.tireSize, `%${q}%`),
+        ...(digits.length >= 3 ? [sql`regexp_replace(coalesce(${parts.tireSize}, ''), '\D', '', 'g') like ${`%${digits}%`}`] : []),
+      )!,
+    );
+  }
   if (cat) conds.push(eq(parts.categoryId, cat));
   const where = and(...conds);
 
-  const [rows, [{ total }], cats, settings] = await Promise.all([
+  const [rows, [{ total }], cats, settings, rules] = await Promise.all([
     db
       .select({
         id: parts.id,
@@ -33,28 +50,45 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         name: parts.name,
         spec: parts.spec,
         manufacturer: parts.manufacturer,
+        categoryId: parts.categoryId,
+        brandId: parts.brandId,
+        brandName: brands.name,
+        brandLogo: brands.logoUrl,
+        tireSize: parts.tireSize,
         retailPrice: parts.retailPrice,
         wholesalePrice: parts.wholesalePrice,
+        onlinePrice: parts.onlinePrice,
         status: parts.status,
         available: vAvailable.available,
       })
       .from(parts)
       .innerJoin(vAvailable, eq(vAvailable.partId, parts.id))
+      .leftJoin(brands, eq(brands.id, parts.brandId))
       .where(where)
-      .orderBy(asc(parts.name), asc(parts.code))
+      // 주문 가능한 상품을 먼저, 품절은 아래로
+      .orderBy(sql`case when ${parts.status} = 'active' and ${vAvailable.available} > 0 then 0 else 1 end`, asc(parts.tireSize), asc(parts.name), asc(parts.code))
       .limit(Math.min(limit, 400)),
-    db.select({ total: count() }).from(parts).where(where),
+    db.select({ total: count() }).from(parts).leftJoin(brands, eq(brands.id, parts.brandId)).where(where),
     db
       .selectDistinct({ id: categories.id, name: categories.name, sortOrder: categories.sortOrder })
       .from(categories)
       .innerJoin(parts, and(eq(parts.categoryId, categories.id), eq(parts.online, true), ne(parts.status, "discontinued")))
       .orderBy(asc(categories.sortOrder), asc(categories.name)),
     getShopSettings(),
+    loadActiveRules(),
   ]);
 
 
+  const today = todayKST();
+  const ads = await db
+    .select({ id: banners.id, imageUrl: banners.imageUrl, title: banners.title, linkUrl: banners.linkUrl })
+    .from(banners)
+    .where(and(eq(banners.active, true), sql`(${banners.startsOn} is null or ${banners.startsOn} <= ${today}) and (${banners.endsOn} is null or ${banners.endsOn} >= ${today})`))
+    .orderBy(asc(banners.sortOrder), asc(banners.id));
+
   return (
     <div className="space-y-3">
+      {!q && !cat && <BannerCarousel items={ads} />}
       <InstallApp variant="banner" />
       {settings?.shopNotice && <p className="rounded-md border border-signal/30 bg-signal/5 px-3 py-2 text-[13px] whitespace-pre-line">{settings.shopNotice}</p>}
       <CatalogFilters cats={cats.map((c) => ({ id: c.id, name: c.name }))} />
@@ -66,12 +100,30 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         </div>
       ) : (
         <ul className="divide-y overflow-hidden rounded-md border bg-card">
-          {rows.map((r) => (
-            <ProductRow
-              key={r.id}
-              p={{ partId: r.id, code: r.code, name: r.name, spec: r.spec, manufacturer: r.manufacturer, price: shown(priceFor(r, me), me.vatApplied), availability: availability(r.available, r.status), paused: r.status === "paused" }}
-            />
-          ))}
+          {rows.map((r) => {
+            const q = quotePart(r, me, rules, 1);
+            return (
+              <ProductRow
+                key={r.id}
+                p={{
+                  partId: r.id,
+                  code: r.code,
+                  name: r.name,
+                  spec: r.spec,
+                  manufacturer: r.manufacturer,
+                  tireSize: r.tireSize,
+                  brandName: r.brandName,
+                  brandLogo: r.brandLogo,
+                  price: shown(q.unit, me.vatApplied),
+                  list: shown(q.list, me.vatApplied),
+                  off: q.off,
+                  nextTier: q.nextTier,
+                  availability: availability(r.available, r.status),
+                  paused: r.status === "paused",
+                }}
+              />
+            );
+          })}
         </ul>
       )}
       {rows.length < total && <LoadMore next={limit + PAGE} />}

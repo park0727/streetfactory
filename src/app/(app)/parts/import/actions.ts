@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { categories, parts, stockMovements, suppliers } from "@/db/schema";
+import { brands, categories, parts, stockMovements, suppliers } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import type { ActionResult } from "@/lib/action-result";
 import { PART_STATUS_FROM_LABEL } from "@/lib/parts-shared";
@@ -12,7 +12,7 @@ import { PART_COLUMNS, type ImportRow, type RowResult, type ValidateResult } fro
 
 const MAX_ROWS = 2000;
 
-type Parsed = { row: number; data: z.infer<typeof partSchema>; category: string; supplier?: string; result: RowResult };
+type Parsed = { row: number; data: z.infer<typeof partSchema>; category: string; supplier?: string; brand?: string; result: RowResult };
 
 /** 헤더 한글 → 키 변환 후 zod 검증. DB 조회 없이 형식만 본다. */
 function parseRows(rows: ImportRow[]) {
@@ -31,6 +31,8 @@ function parseRows(rows: ImportRow[]) {
     if (obj.online !== undefined) obj.online = yes(obj.online);
     const category = String(obj.category ?? "").trim();
     const supplier = obj.supplier ? String(obj.supplier).trim() : undefined;
+    const brand = obj.brand ? String(obj.brand).trim() : undefined;
+    delete obj.brand;
     const r = partSchema.safeParse({ ...obj, categoryId: 1 }); // categoryId 는 뒤에서 이름으로 치환
     const errors: string[] = [];
     if (!category) errors.push("카테고리가 비어 있습니다.");
@@ -46,6 +48,7 @@ function parseRows(rows: ImportRow[]) {
       data: r.success ? r.data : (undefined as unknown as z.infer<typeof partSchema>),
       category,
       supplier,
+      brand,
       result: { row: rowNo, code: String(obj.code ?? "").toUpperCase(), action: errors.length ? "error" : "insert", errors, notes: [] },
     });
   });
@@ -63,6 +66,9 @@ async function resolve(parsed: Parsed[]) {
   const existingSet = new Set(existing.map((e) => e.code));
   const cats = await db.select({ id: categories.id, name: categories.name }).from(categories);
   const sups = await db.select({ id: suppliers.id, name: suppliers.name }).from(suppliers);
+  const brs = await db.select({ id: brands.id, name: brands.name }).from(brands);
+  const brandMap = new Map(brs.map((b) => [b.name.toLowerCase(), b.id]));
+  const newBrands = new Set<string>();
   const catMap = new Map(cats.map((c) => [c.name, c.id]));
   const supMap = new Map(sups.map((s) => [s.name, s.id]));
 
@@ -90,12 +96,16 @@ async function resolve(parsed: Parsed[]) {
       newCategories.add(p.category);
       res.notes.push(`카테고리 '${p.category}' 신규 생성`);
     }
+    if (p.brand && !brandMap.has(p.brand.toLowerCase())) {
+      newBrands.add(p.brand);
+      res.notes.push(`브랜드 '${p.brand}' 신규 생성`);
+    }
     if (p.supplier && !supMap.has(p.supplier)) {
       newSuppliers.add(p.supplier);
       res.notes.push(`공급사 '${p.supplier}' 신규 생성`);
     }
   }
-  return { catMap, supMap, newCategories: [...newCategories], newSuppliers: [...newSuppliers] };
+  return { catMap, supMap, brandMap, newBrands: [...newBrands], newCategories: [...newCategories], newSuppliers: [...newSuppliers] };
 }
 
 function summarize(parsed: Parsed[], newCategories: string[], newSuppliers: string[]): ValidateResult {
@@ -123,7 +133,7 @@ export async function commitPartsImport(rows: ImportRow[]): Promise<ActionResult
   const me = await requireModule("parts");
   if (rows.length === 0 || rows.length > MAX_ROWS) return { ok: false, error: "행 수가 올바르지 않습니다." };
   const parsed = parseRows(rows);
-  const { catMap, supMap, newCategories, newSuppliers } = await resolve(parsed);
+  const { catMap, supMap, brandMap, newBrands, newCategories, newSuppliers } = await resolve(parsed);
   const summary = summarize(parsed, newCategories, newSuppliers);
   if (summary.errors > 0) return { ok: false, error: `오류 ${summary.errors}건이 있어 저장하지 않았습니다. 미리보기에서 확인하세요.` };
 
@@ -132,6 +142,10 @@ export async function commitPartsImport(rows: ImportRow[]): Promise<ActionResult
     for (const name of newCategories) {
       const [c] = await tx.insert(categories).values({ name, sortOrder: 99 }).returning({ id: categories.id });
       catMap.set(name, c.id);
+    }
+    for (const name of newBrands) {
+      const [b] = await tx.insert(brands).values({ name }).returning({ id: brands.id });
+      brandMap.set(name.toLowerCase(), b.id);
     }
     for (const name of newSuppliers) {
       const country = parsed.find((p) => p.supplier === name)?.data.country ?? "-";
@@ -150,6 +164,9 @@ export async function commitPartsImport(rows: ImportRow[]): Promise<ActionResult
         standardCost: d.standardCost,
         retailPrice: d.retailPrice,
         wholesalePrice: d.wholesalePrice,
+        onlinePrice: d.onlinePrice,
+        ...(p.brand !== undefined ? { brandId: brandMap.get(p.brand.toLowerCase()) ?? null } : {}),
+        ...(d.tireSize !== undefined ? { tireSize: d.tireSize || null } : {}),
         ...(d.online !== undefined ? { online: d.online } : {}),
         safetyStock: d.safetyStock,
         status: d.status,

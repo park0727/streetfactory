@@ -22,6 +22,9 @@ export type PartRow = {
   standardCost: number;
   retailPrice: number;
   wholesalePrice: number;
+  onlinePrice: number;
+  brandId: number | null;
+  tireSize: string | null;
   online: boolean;
   avgCost: number;
   safetyStock: number;
@@ -30,12 +33,13 @@ export type PartRow = {
 };
 export type Cat = { id: number; name: string };
 export type Sup = { id: number; name: string; country: string };
+export type BrandOpt = { id: number; name: string };
 
-type Props = { open: boolean; onClose: () => void; part: PartRow | null; cats: Cat[]; sups: Sup[] };
+type Props = { open: boolean; onClose: () => void; part: PartRow | null; cats: Cat[]; sups: Sup[]; brands: BrandOpt[] };
 
 const NEW = "__new__";
 
-export function PartDialog({ open, onClose, part, cats, sups }: Props) {
+export function PartDialog({ open, onClose, part, cats, sups, brands }: Props) {
   const [state, action, pending] = useActionState(savePart, undefined);
   useActionToast(state, onClose);
   const isNew = !part;
@@ -88,6 +92,24 @@ export function PartDialog({ open, onClose, part, cats, sups }: Props) {
             <Field label="규격 / 호환기종" htmlFor="p-spec" className="sm:col-span-4">
               <Input id="p-spec" name="spec" defaultValue={part?.spec ?? ""} placeholder="Honda CBR600RR 07-12" maxLength={200} />
             </Field>
+            <Field label="타이어 사이즈" htmlFor="p-size" className="sm:col-span-2" hint="타이어만">
+              <Input id="p-size" name="tireSize" defaultValue={part?.tireSize ?? ""} placeholder="130/70-13" maxLength={40} className="tabular" />
+            </Field>
+            <Field label="브랜드 (로고 표시)" htmlFor="p-brand" className="sm:col-span-2">
+              <Select name="brandId" defaultValue={part?.brandId ? String(part.brandId) : "none"}>
+                <SelectTrigger id="p-brand" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">없음</SelectItem>
+                  {brands.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="제조사" htmlFor="p-mfr" className="sm:col-span-2">
               <Input id="p-mfr" name="manufacturer" defaultValue={part?.manufacturer ?? ""} maxLength={80} />
             </Field>
@@ -114,6 +136,9 @@ export function PartDialog({ open, onClose, part, cats, sups }: Props) {
             </Field>
             <Field label="권장소비자가 (₩)" htmlFor="p-price" className="sm:col-span-2">
               <Input id="p-price" name="retailPrice" type="number" min={0} step={1} defaultValue={part?.retailPrice ?? ""} className="tabular text-right" />
+            </Field>
+            <Field label="온라인 판매가 (₩)" htmlFor="p-online" className="sm:col-span-2" hint="주문 화면 정가, 비우면 소비자가">
+              <Input id="p-online" name="onlinePrice" type="number" min={0} step={1} defaultValue={part?.onlinePrice || ""} className="tabular text-right" />
             </Field>
             <Field label="도매가 (₩)" htmlFor="p-whole" className="sm:col-span-2" hint="도매 거래처용, 비우면 소비자가">
               <Input id="p-whole" name="wholesalePrice" type="number" min={0} step={1} defaultValue={part?.wholesalePrice || ""} className="tabular text-right" />

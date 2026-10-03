@@ -20,6 +20,9 @@ export const partSchema = z.object({
   standardCost: z.coerce.number().min(0, "표준원가는 0 이상").default(0),
   retailPrice: z.coerce.number().min(0, "소비자가는 0 이상").default(0),
   wholesalePrice: z.coerce.number().min(0, "도매가는 0 이상").default(0),
+  onlinePrice: z.coerce.number().min(0, "온라인 판매가는 0 이상").default(0),
+  brandId: z.coerce.number().int().positive().optional(),
+  tireSize: z.string().trim().max(40).optional(),
   online: z.boolean().optional(), // 주문 화면 노출. 엑셀에 열이 없으면 기존 값 유지
   safetyStock: z.coerce.number().int().min(0, "안전재고는 0 이상").default(0),
   status: z.enum(["active", "paused", "discontinued"]).default("active"),

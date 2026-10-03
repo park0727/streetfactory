@@ -11,6 +11,9 @@ import {
   Settings2,
   ShoppingBag,
   Store,
+  BadgePercent,
+  Images,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 
@@ -42,6 +45,9 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/settings/users", label: "사용자 관리", icon: Users, adminOnly: true },
       { href: "/settings/master", label: "기준 데이터", icon: Settings2 },
+      { href: "/settings/discounts", label: "할인 규칙", icon: BadgePercent },
+      { href: "/settings/banners", label: "광고 배너", icon: Images },
+      { href: "/settings/brands", label: "브랜드·로고", icon: Tags },
       { href: "/settings/shop", label: "주문 화면 설정", icon: Store, adminOnly: true },
     ],
   },

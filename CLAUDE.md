@@ -1,6 +1,6 @@
-# Streetfactory ERP
+# 라이더매니아(RiderMania) ERP
 
-오토바이 수리·부품 업체의 수입 부품 재고·판매·거래처 관리 시스템. 사용자 2~3명, 운영비 0원 목표.
+(저장소·로컬 폴더 이름은 streetfactory 그대로) 오토바이 수리·부품 업체의 수입 부품 재고·판매·거래처 관리 시스템. 사용자 2~3명, 운영비 0원 목표.
 
 ## 문서 (먼저 읽을 것)
 - `docs/SPEC.md` — 확정 요구사항과 비즈니스 규칙
@@ -85,10 +85,17 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 - 엑셀 다운로드 = `/<route>/export` 라우트 핸들러(JSON) + 클라이언트 `downloadXlsx`. 업로드 = 클라이언트 `readXlsx` → 서버 검증 액션 → 미리보기 → 저장 액션.
 - 화면 검증: 로컬 Postgres `streetfactory_test` 에 `scripts/seed-sample.mjs` 로 샘플을 넣고 `DATABASE_URL=postgresql://localhost:5432/streetfactory_test npm run dev` 로 띄운다. 운영 DB 에는 샘플을 넣지 않는다.
 
+## 접속 주소·배포
+- 앱 Worker 이름은 `ridermania` (`wrangler.jsonc`). 옛 `streetfactory` Worker 는 301 리다이렉트 전용이다. 거기에 앱을 다시 배포하지 않는다.
+- 프로덕션 비밀값: DATABASE_URL, SUPABASE_SECRET_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, VAPID_PRIVATE_KEY.
+- 이미지 업로드 버킷은 `scripts/setup-storage.mjs` 로 만든다.
+
 ## 거래처 주문 화면 (`src/app/shop`)
 - 고객 인증은 `src/lib/shop.ts` 의 `getCustomer` / `requireCustomer`. 직원 헬퍼(`requireUser`)와 섞지 않는다. 고객 데이터 조회는 항상 `partnerId = me.partnerId` 로 제한한다.
 - 고객에게 재고 수량·원가를 절대 내려보내지 않는다. 표시는 `availability()` 의 3단계만.
-- 가격은 `src/lib/pricing.ts` 의 `priceFor` 하나로 계산한다.
+- 가격은 `src/lib/pricing.ts` 의 `quotePart` 하나로 계산한다 (정가·도매가·거래처 할인·할인 규칙·수량 단계). 규칙은 `src/lib/discounts.ts` 의 `loadActiveRules`.
+- 주문 화면 금액 표시는 `shown()` 으로 부가세 포함. DB 에는 공급가.
+- 푸시 발송은 `src/lib/push-notify.ts`. 주문 처리 응답을 늦추지 않도록 `after()` 안에서 부른다.
 - 판매 전표 생성은 `src/app/(app)/entry/sale-core.ts` 의 `insertSale` 을 공유한다 (출고 등록·온라인 주문 출고).
 
 ## UI 규칙

@@ -22,6 +22,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+import { jsonb } from "drizzle-orm/pg-core";
 
 // ---------- enums ----------
 export const userRole = pgEnum("user_role", ["admin", "staff"]);
@@ -83,6 +84,15 @@ export const suppliers = pgTable("suppliers", {
   createdAt: createdAt(),
 });
 
+// ---------- 브랜드 (타이어 등, 주문 화면 로고) ----------
+export const brands = pgTable("brands", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  logoUrl: text("logo_url"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+});
+
 // ---------- 부품 마스터 (SSOT) ----------
 export const parts = pgTable(
   "parts",
@@ -101,6 +111,9 @@ export const parts = pgTable(
     retailPrice: krw("retail_price").notNull().default(0), // 권장소비자가
     wholesalePrice: krw("wholesale_price").notNull().default(0), // 도매가 (0 이면 권장소비자가 사용)
     online: boolean("online").notNull().default(false), // 고객 주문 화면 노출
+    onlinePrice: krw("online_price").notNull().default(0), // 주문 화면 정가 (0 이면 권장소비자가)
+    brandId: integer("brand_id").references(() => brands.id, { onDelete: "set null" }),
+    tireSize: text("tire_size"), // 예: 130/70-13
     avgCost: cost("avg_cost").notNull().default(0), // 이동평균 원가
     safetyStock: integer("safety_stock").notNull().default(0),
     status: partStatus("status").notNull().default("active"),
@@ -311,6 +324,58 @@ export const webOrderLines = pgTable(
   (t) => [index("web_order_lines_part_idx").on(t.partId)],
 );
 
+// ---------- 할인 규칙 (모든 거래처 공통. 거래처 할인율과 비교해 큰 쪽 하나만 적용) ----------
+export type DiscountTier = { minQty: number; rate: number };
+export const discountRules = pgTable("discount_rules", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  active: boolean("active").notNull().default(true),
+  categoryId: integer("category_id").references(() => categories.id, { onDelete: "cascade" }), // null = 전체
+  brandId: integer("brand_id").references(() => brands.id, { onDelete: "cascade" }), // null = 전체
+  baseRate: numeric("base_rate", { precision: 5, scale: 2, mode: "number" }).notNull().default(0), // 항상 적용 %
+  tiers: jsonb("tiers").$type<DiscountTier[]>().notNull().default([]), // 같은 상품 N개 이상 %
+  createdAt: createdAt(),
+});
+export const discountRuleExclusions = pgTable(
+  "discount_rule_exclusions",
+  {
+    ruleId: integer("rule_id")
+      .notNull()
+      .references(() => discountRules.id, { onDelete: "cascade" }),
+    partId: bigint("part_id", { mode: "number" })
+      .notNull()
+      .references(() => parts.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.ruleId, t.partId] })],
+);
+
+// ---------- 주문 화면 광고 배너 ----------
+export const banners = pgTable("banners", {
+  id: serial("id").primaryKey(),
+  imageUrl: text("image_url").notNull(),
+  title: text("title"), // 대체 텍스트
+  linkUrl: text("link_url"), // 누르면 이동 (주문 화면 안 주소)
+  sortOrder: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  startsOn: date("starts_on"),
+  endsOn: date("ends_on"),
+  createdAt: createdAt(),
+});
+
+// ---------- 직원 휴대폰 푸시 알림 구독 ----------
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  profileId: uuid("profile_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  device: text("device"), // 사람이 알아볼 기기 이름 (예: 아이폰 · 사파리)
+  createdAt: createdAt(),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+});
+
 // ---------- 쇼핑 설정 (단일 행 id = 1) ----------
 export const shopSettings = pgTable("shop_settings", {
   id: integer("id").primaryKey(),
@@ -383,6 +448,9 @@ export type Payment = typeof payments.$inferSelect;
 export type CustomerAccount = typeof customerAccounts.$inferSelect;
 export type WebOrder = typeof webOrders.$inferSelect;
 export type ShopSettings = typeof shopSettings.$inferSelect;
+export type Brand = typeof brands.$inferSelect;
+export type DiscountRule = typeof discountRules.$inferSelect;
+export type Banner = typeof banners.$inferSelect;
 
 // sql 은 뷰/함수 정의(drizzle/custom SQL)에서 재사용
 export { sql };

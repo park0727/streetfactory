@@ -2,7 +2,7 @@ import Link from "next/link";
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { FileUp, Plus } from "lucide-react";
 import { db } from "@/db";
-import { categories, parts, suppliers } from "@/db/schema";
+import { brands, categories, parts, suppliers } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { int, str, PAGE_SIZE } from "@/lib/query-params";
 import { PageHeader, Panel } from "@/components/page-header";
@@ -25,7 +25,7 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
   const page = int(sp, "page", 1);
 
   const conds: SQL[] = [];
-  if (q) conds.push(or(ilike(parts.code, `%${q}%`), ilike(parts.name, `%${q}%`), ilike(parts.spec, `%${q}%`))!);
+  if (q) conds.push(or(ilike(parts.code, `%${q}%`), ilike(parts.name, `%${q}%`), ilike(parts.spec, `%${q}%`), ilike(parts.tireSize, `%${q}%`))!);
   if (cat) conds.push(eq(parts.categoryId, cat));
   if (mfr) conds.push(eq(parts.manufacturer, mfr));
   if (status === "active" || status === "paused" || status === "discontinued") conds.push(eq(parts.status, status));
@@ -49,6 +49,10 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
         standardCost: parts.standardCost,
         retailPrice: parts.retailPrice,
         wholesalePrice: parts.wholesalePrice,
+        onlinePrice: parts.onlinePrice,
+        brandId: parts.brandId,
+        brandName: brands.name,
+        tireSize: parts.tireSize,
         online: parts.online,
         avgCost: parts.avgCost,
         safetyStock: parts.safetyStock,
@@ -58,6 +62,7 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
       .from(parts)
       .innerJoin(categories, eq(categories.id, parts.categoryId))
       .leftJoin(suppliers, eq(suppliers.id, parts.supplierId))
+      .leftJoin(brands, eq(brands.id, parts.brandId))
       .where(where)
       .orderBy(asc(parts.code))
       .limit(PAGE_SIZE)
@@ -74,6 +79,7 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
   ]);
 
   const manufacturers = mfrs.map((r) => r.m!).filter(Boolean);
+  const brandList = await db.select({ id: brands.id, name: brands.name }).from(brands).orderBy(asc(brands.sortOrder), asc(brands.name));
 
   return (
     <>
@@ -88,7 +94,7 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
                 <FileUp /> 엑셀 업로드
               </Link>
             </Button>
-            <NewPartButton cats={cats} sups={sups}>
+            <NewPartButton cats={cats} sups={sups} brands={brandList}>
               <Plus /> 부품 등록
             </NewPartButton>
           </>
@@ -99,7 +105,7 @@ export default async function PartsPage({ searchParams }: PageProps<"/parts">) {
         <BulkOnline ids={rows.filter((r) => r.status !== "discontinued").map((r) => r.id)} />
       </div>
       <Panel className="mt-3 overflow-hidden">
-        <PartsTable rows={rows} cats={cats} sups={sups} />
+        <PartsTable rows={rows} cats={cats} sups={sups} brands={brandList} />
         <div className="border-t px-4 py-2.5">
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} />
         </div>
