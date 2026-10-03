@@ -113,12 +113,13 @@ type TargetPart = Awaited<ReturnType<typeof listTargetParts>>[number];
 
 function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cats: Opt[]; brands: Opt[]; onClose: () => void }) {
   const router = useRouter();
-  const [name, setName] = useState(rule?.name ?? "타이어 할인");
+  const [name, setName] = useState(rule?.name ?? "");
   const [active, setActive] = useState(rule?.active ?? true);
-  const [categoryId, setCategoryId] = useState<number | null>(rule?.categoryId ?? (cats.find((c) => c.name.includes("타이어"))?.id ?? null));
+  const [categoryId, setCategoryId] = useState<number | null>(rule?.categoryId ?? null);
   const [brandId, setBrandId] = useState<number | null>(rule?.brandId ?? null);
-  const [baseRate, setBaseRate] = useState(rule?.baseRate ?? 5);
-  const [tiers, setTiers] = useState<RuleTier[]>(rule?.tiers?.length ? rule.tiers : [{ minQty: 4, rate: 10 }]);
+  // 입력칸은 문자열로 들고 있다가 저장할 때 숫자로 바꾼다 (새 규칙은 빈칸 + 회색 예시)
+  const [baseRate, setBaseRate] = useState(rule && rule.baseRate > 0 ? String(rule.baseRate) : "");
+  const [tiers, setTiers] = useState<{ minQty: string; rate: string }[]>(rule?.tiers?.length ? rule.tiers.map((t) => ({ minQty: String(t.minQty), rate: String(t.rate) })) : [{ minQty: "", rate: "" }]);
   const [qtyBasis, setQtyBasis] = useState<"total" | "line">(rule?.qtyBasis ?? "total");
   const [pickMode, setPickMode] = useState<"target" | "picked">(rule?.pickMode ?? "target");
   const [excluded, setExcluded] = useState<Set<number>>(new Set(rule?.listed ?? []));
@@ -150,7 +151,7 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="dr-name">규칙 이름</Label>
-            <Input id="dr-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
+            <Input id="dr-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="예: 타이어 할인 (거래처 화면 안내 문구에 들어갑니다)" />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>할인할 상품</Label>
@@ -181,7 +182,7 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="dr-base">항상 할인 (%)</Label>
-            <Input id="dr-base" type="number" min={0} max={90} step={0.5} value={baseRate} onChange={(e) => setBaseRate(Number(e.target.value) || 0)} className="tabular text-right" />
+            <Input id="dr-base" type="number" inputMode="decimal" min={0} max={90} step={0.5} value={baseRate} onChange={(e) => setBaseRate(e.target.value)} placeholder="예: 5" className="tabular text-right" />
             <p className="text-[11.5px] text-steel">수량과 상관없이 늘 적용. 없으면 0.</p>
           </div>
           <div className="space-y-1.5">
@@ -193,15 +194,15 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
             <div className="space-y-1.5">
               {tiers.map((t, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-[13px]">
-                  <Input type="number" min={2} value={t.minQty} onChange={(e) => setTiers((ts) => ts.map((x, j) => (j === i ? { ...x, minQty: Number(e.target.value) || 2 } : x)))} className="tabular h-8 w-16 text-right" aria-label="최소 수량" />
+                  <Input type="number" inputMode="numeric" min={2} value={t.minQty} onChange={(e) => setTiers((ts) => ts.map((x, j) => (j === i ? { ...x, minQty: e.target.value } : x)))} placeholder="10" className="tabular h-8 w-16 text-right" aria-label="최소 수량" />
                   <span>개 이상</span>
-                  <Input type="number" min={0} max={90} step={0.5} value={t.rate} onChange={(e) => setTiers((ts) => ts.map((x, j) => (j === i ? { ...x, rate: Number(e.target.value) || 0 } : x)))} className="tabular h-8 w-16 text-right" aria-label="할인율" />
+                  <Input type="number" inputMode="decimal" min={0} max={90} step={0.5} value={t.rate} onChange={(e) => setTiers((ts) => ts.map((x, j) => (j === i ? { ...x, rate: e.target.value } : x)))} placeholder="7" className="tabular h-8 w-16 text-right" aria-label="할인율" />
                   <span>%</span>
                   <Button type="button" variant="ghost" size="icon-xs" onClick={() => setTiers((ts) => ts.filter((_, j) => j !== i))} aria-label="단계 삭제"><X /></Button>
                 </div>
               ))}
               {tiers.length < 6 && (
-                <Button type="button" variant="outline" size="xs" onClick={() => setTiers((ts) => [...ts, { minQty: (ts.at(-1)?.minQty ?? 2) + 2, rate: (ts.at(-1)?.rate ?? baseRate) + 2 }])}>
+                <Button type="button" variant="outline" size="xs" onClick={() => setTiers((ts) => [...ts, { minQty: "", rate: "" }])}>
                   <Plus /> 단계 추가
                 </Button>
               )}
@@ -260,7 +261,17 @@ function RuleDialog({ rule, cats, brands, onClose }: { rule: RuleRow | null; cat
             disabled={saving}
             onClick={() =>
               startSave(async () => {
-                const r = await saveRule({ id: rule?.id, name, active, categoryId, brandId, baseRate, tiers: tiers.filter((t) => t.rate > 0), qtyBasis, pickMode, listed: [...excluded] });
+                if (!name.trim()) return void toast.error("규칙 이름을 입력하세요.");
+                const base = baseRate.trim() === "" ? 0 : Number(baseRate);
+                if (!Number.isFinite(base) || base < 0 || base > 90) return void toast.error("항상 할인은 0~90 사이 숫자로 입력하세요.");
+                // 둘 다 비운 줄은 무시, 하나만 적은 줄은 알려준다
+                const filled = tiers.filter((t) => t.minQty.trim() !== "" || t.rate.trim() !== "");
+                const half = filled.find((t) => t.minQty.trim() === "" || t.rate.trim() === "");
+                if (half) return void toast.error("수량 할인은 개수와 %를 모두 입력하세요. 필요 없으면 줄을 지우세요.");
+                const parsed = filled.map((t) => ({ minQty: Number(t.minQty), rate: Number(t.rate) }));
+                if (parsed.some((t) => !Number.isInteger(t.minQty) || t.minQty < 2)) return void toast.error("수량 할인 개수는 2 이상의 정수로 입력하세요.");
+                if (parsed.some((t) => !Number.isFinite(t.rate) || t.rate <= 0 || t.rate > 90)) return void toast.error("수량 할인 %는 0보다 크고 90 이하로 입력하세요.");
+                const r = await saveRule({ id: rule?.id, name, active, categoryId, brandId, baseRate: base, tiers: parsed, qtyBasis, pickMode, listed: [...excluded] });
                 if (!r.ok) return void toast.error(r.error);
                 toast.success(r.message);
                 onClose();
