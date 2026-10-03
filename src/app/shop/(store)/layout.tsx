@@ -18,7 +18,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <div className="flex min-h-svh flex-col bg-background">
         <header className="sticky z-30 bg-sidebar text-sidebar-foreground" style={{ top: "env(safe-area-inset-top, 0px)" }}>
           <div className="mx-auto flex h-13 max-w-5xl items-center gap-3 px-4">
-            <Brand size="sm" className="text-white" />
+            <Brand href="/" size="sm" className="text-white" />
             <span className="hidden truncate text-[12.5px] text-sidebar-foreground/70 sm:inline">{me.partnerName}</span>
             <div className="ml-auto flex items-center gap-2">
               <ShopTopNav />

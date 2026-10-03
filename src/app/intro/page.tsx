@@ -30,7 +30,7 @@ export default async function IntroPage() {
     <main className="flex min-h-svh flex-col bg-background">
       <section className="relative overflow-hidden bg-sidebar text-sidebar-foreground">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
-          <Brand size="md" className="text-white" />
+          <Brand href="/" size="md" className="text-white" />
           {s?.phone && (
             <a href={`tel:${tel}`} className="flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-2 text-[14px] text-white hover:bg-white/15">
               <Phone className="size-4" /> {s.phone}

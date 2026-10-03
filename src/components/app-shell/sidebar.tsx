@@ -93,7 +93,7 @@ export function Sidebar({ user, badges }: Props) {
   return (
     <aside className="sticky top-0 hidden h-svh w-[232px] shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
       <div className="px-6 pt-6 pb-1">
-        <Brand className="text-white" />
+        <Brand href="/" className="text-white" />
       </div>
       <NavList user={user} badges={badges} />
       <UserBox user={user} />
@@ -120,14 +120,14 @@ export function MobileHeader({ user, badges }: Props) {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex w-[280px] flex-col gap-0 bg-sidebar p-0 text-sidebar-foreground">
-          <SheetTitle className="px-6 pt-6 pb-1">
-            <Brand className="text-white" />
+          <SheetTitle className="px-6 pt-6 pb-1" onClick={() => setOpen(false)}>
+            <Brand href="/" className="text-white" />
           </SheetTitle>
           <NavList user={user} badges={badges} onNavigate={() => setOpen(false)} />
           <UserBox user={user} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <Brand size="sm" className="text-white" />
+      <Brand href="/" size="sm" className="text-white" />
     </header>
   );
 }
