@@ -285,6 +285,31 @@ export const customerAccounts = pgTable("customer_accounts", {
   createdAt: createdAt(),
 });
 
+// ---------- 거래처 가입 신청 (주문 화면에서 신청 → 관리자 승인 시 거래처·주문 계정 연결) ----------
+// 로그인 계정(auth.users)은 신청할 때 만든다. 승인 전에는 customer_accounts 가 없어 로그인되지 않는다.
+// 비밀번호는 여기 저장하지 않는다. 거절하면 계정을 지우고 user_id 를 비운다.
+export const partnerApplications = pgTable(
+  "partner_applications",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    userId: uuid("user_id"),
+    email: text("email").notNull(),
+    companyName: text("company_name").notNull(),
+    bizNo: text("biz_no"),
+    contactName: text("contact_name").notNull(),
+    phone: text("phone").notNull(),
+    address: text("address"),
+    memo: text("memo"),
+    status: text("status").$type<"pending" | "approved" | "rejected">().notNull().default("pending"),
+    partnerId: bigint("partner_id", { mode: "number" }).references(() => partners.id, { onDelete: "set null" }),
+    rejectReason: text("reject_reason"),
+    createdAt: createdAt(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: uuid("reviewed_by").references(() => profiles.id),
+  },
+  (t) => [index("partner_applications_status_idx").on(t.status, t.createdAt)],
+);
+
 // ---------- 온라인 주문 (접수 → 출고 처리 시 판매 전표 생성) ----------
 export const webOrders = pgTable(
   "web_orders",

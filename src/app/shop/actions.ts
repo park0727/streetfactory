@@ -7,7 +7,7 @@ import { shown } from "@/lib/pricing";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { customerAccounts, parts, profiles, vAvailable, webOrderLines, webOrders } from "@/db/schema";
+import { customerAccounts, partnerApplications, parts, profiles, vAvailable, webOrderLines, webOrders } from "@/db/schema";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { requireCustomer } from "@/lib/shop";
@@ -29,8 +29,12 @@ export async function shopLogin(_: ShopLoginState, fd: FormData): Promise<ShopLo
   if (error) return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
   const [c] = await db.select({ active: customerAccounts.isActive, must: customerAccounts.mustChangePassword }).from(customerAccounts).where(eq(customerAccounts.id, data.user.id));
   if (!c) {
-    const [staff] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, data.user.id));
+    const [[staff], [app]] = await Promise.all([
+      db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, data.user.id)),
+      db.select({ status: partnerApplications.status }).from(partnerApplications).where(eq(partnerApplications.userId, data.user.id)),
+    ]);
     await supabase.auth.signOut();
+    if (app?.status === "pending") return { error: "가입 신청을 확인하고 있습니다. 승인되면 바로 로그인할 수 있습니다. 급하시면 전화 주세요." };
     return staff
       ? { error: "직원용 계정은 이 화면에서 로그인할 수 없습니다. 거래처 주문 계정으로 로그인해 주세요." }
       : { error: "주문할 수 있는 계정이 아닙니다. 라이더매니아 담당자에게 연락해 주세요." };

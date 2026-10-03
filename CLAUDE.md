@@ -94,7 +94,7 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
   - **관리자 화면(admin.)으로 가는 링크는 어디에도 두지 않는다** (회사 소개·주문 화면·오류 안내 포함). 직원은 주소 직접 입력이나 설치한 앱 아이콘으로만 들어온다.
   - 앱 설치는 주소별로 따로: `src/components/install-app.tsx` 의 `app="shop"`(주문 화면 안) / `app="admin"`(관리자 로그인·내 정보). 회사 소개는 설치 대상 아님(manifest 없음). 검색 노출은 회사 소개만.
   - 로그인 쿠키는 주소마다 따로라 직원·거래처 세션이 섞이지 않는다.
-- 로컬도 같은 규칙: `http://localhost:3000`(소개), `http://shop.localhost:3000`, `http://admin.localhost:3000`.
+- 로컬도 같은 규칙: `http://localhost:3000`(소개), `http://shop.localhost:3000`, `http://admin.localhost:3000`. 로컬 dev 는 서버 액션 redirect 를 localhost:3000 으로 다시 요청하므로 proxy 가 로컬에서만 `x-forwarded-host` 를 본다.
 - 앱 Worker 이름은 `ridermania` (`wrangler.jsonc`). 옛 `streetfactory` Worker 는 301 리다이렉트 전용이다. 거기에 앱을 다시 배포하지 않는다.
 - 프로덕션 비밀값: DATABASE_URL, SUPABASE_SECRET_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, VAPID_PRIVATE_KEY.
 - 이미지 업로드 버킷은 `scripts/setup-storage.mjs` 로 만든다.
@@ -106,6 +106,8 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 - 주문 화면 금액 표시는 `shown()` 으로 부가세 포함. DB 에는 공급가.
 - 푸시 발송은 `src/lib/push-notify.ts`. 주문 처리 응답을 늦추지 않도록 `after()` 안에서 부른다.
 - 판매 전표 생성은 `src/app/(app)/entry/sale-core.ts` 의 `insertSale` 을 공유한다 (출고 등록·온라인 주문 출고).
+- 거래처 가입 신청은 `src/app/shop/signup-actions.ts`(공개) → 관리자 `src/app/(app)/partners/applications`. 신청 때 만든 auth 계정에 승인 시 `customer_accounts` 를 붙인다. 거래처 코드는 `src/lib/partner-code.ts`.
+- SQL 템플릿 안 정규식은 `'\\D'` 처럼 역슬래시를 두 번 쓴다 (`'\D'` 는 JS 에서 `'D'` 가 된다).
 
 ## UI 규칙
 - **문구는 컴퓨터에 익숙하지 않은 일반인 기준.** 경로(`/shop`)나 기술 용어로 안내하지 말고, 이동이 필요하면 버튼을 준다.

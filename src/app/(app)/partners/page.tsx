@@ -1,6 +1,9 @@
 import { asc, desc, eq, ilike, or, sql, type SQL, and } from "drizzle-orm";
+import Link from "next/link";
+import { UserPlus } from "lucide-react";
 import { db } from "@/db";
-import { customerAccounts, partners, vPartnerStats, vSalesSettlement } from "@/db/schema";
+import { Button } from "@/components/ui/button";
+import { customerAccounts, partnerApplications, partners, vPartnerStats, vSalesSettlement } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { str } from "@/lib/query-params";
 import { PageHeader, Panel } from "@/components/page-header";
@@ -53,13 +56,24 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(sql`coalesce(${vPartnerStats.totalAmount}, 0)`), asc(partners.name));
 
+  const [{ n: signups }] = await db.select({ n: sql<number>`count(*)::int` }).from(partnerApplications).where(eq(partnerApplications.status, "pending"));
   const accounts = await db
     .select({ id: customerAccounts.id, partnerId: customerAccounts.partnerId, name: customerAccounts.name, email: customerAccounts.email, isActive: customerAccounts.isActive, mustChangePassword: customerAccounts.mustChangePassword })
     .from(customerAccounts)
     .orderBy(asc(customerAccounts.createdAt));
   return (
     <>
-      <PageHeader title="거래처" description="국내 대리점·정비센터·직영점·온라인몰. 실적은 판매 원장에서 자동 집계됩니다." actions={<NewPartnerButton />} />
+      <PageHeader title="거래처" description="국내 대리점·정비센터·직영점·온라인몰. 실적은 판매 원장에서 자동 집계됩니다." actions={
+          <div className="flex gap-2">
+            <Button asChild variant={signups > 0 ? "default" : "outline"} className={signups > 0 ? "bg-status-critical text-white hover:bg-status-critical/90" : ""}>
+              <Link href="/partners/applications">
+                <UserPlus /> 가입 신청{signups > 0 && ` ${signups}건`}
+              </Link>
+            </Button>
+            <NewPartnerButton />
+          </div>
+        }
+      />
       <PartnersToolbar />
       <Panel className="mt-3 overflow-hidden">
         <PartnersTable rows={rows} accounts={accounts} />

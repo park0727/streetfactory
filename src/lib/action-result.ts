@@ -9,7 +9,9 @@ export type AnyActionResult = { ok: true; message?: string } | ActionFail;
 export function firstIssue(issues: { path: PropertyKey[]; message: string }[]): string {
   const i = issues[0];
   if (!i) return "입력값이 올바르지 않습니다.";
-  const path = i.path.length ? `${String(i.path[0])}: ` : "";
+  // 사용자에게는 필드 이름(password2 등)을 보이지 않는다. 기본 영어 메시지일 때만 위치를 덧붙인다.
+  const korean = /[가-힣]/.test(i.message);
+  const path = !korean && i.path.length ? `${String(i.path[0])}: ` : "";
   return `${path}${i.message}`;
 }
 

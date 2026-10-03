@@ -19,11 +19,11 @@ export const metadata: Metadata = {
 const FEATURES = [
   { icon: Building2, title: "수입 타이어·부품", desc: "수입 오토바이 타이어와 부품을 재고로 갖추고 공급합니다." },
   { icon: Wrench, title: "오토바이 수리", desc: "타이어 교체와 오토바이 정비·수리를 합니다." },
-  { icon: ClipboardList, title: "거래처 온라인 주문", desc: "등록된 거래처는 휴대폰으로 재고를 보고 바로 주문할 수 있습니다." },
+  { icon: ClipboardList, title: "거래처 온라인 주문", desc: "가입 승인된 거래처는 휴대폰으로 재고를 보고 바로 주문할 수 있습니다." },
 ];
 
 export default async function IntroPage() {
-  const [s, shop] = await Promise.all([getShopSettings(), urlFor("shop")]);
+  const [s, shop, signup] = await Promise.all([getShopSettings(), urlFor("shop"), urlFor("shop", "/signup")]);
   const company = s?.companyName || "라이더매니아";
   const tel = s?.phone?.replace(/[^0-9]/g, "");
   return (
@@ -74,16 +74,21 @@ export default async function IntroPage() {
       <section className="mx-auto w-full max-w-5xl px-5 pb-12">
         <div className="flex flex-col items-start gap-4 rounded-lg bg-sidebar px-6 py-6 text-sidebar-foreground sm:flex-row sm:items-center">
           <div className="flex-1">
-            <p className="text-[17px] font-semibold text-white">거래처 등록 문의</p>
-            <p className="mt-1 text-[14px] text-sidebar-foreground/70">거래처로 등록하면 주문 계정을 드립니다. 전화로 문의해 주세요.</p>
+            <p className="text-[17px] font-semibold text-white">거래처 가입 안내</p>
+            <p className="mt-1 text-[14px] text-sidebar-foreground/70">오토바이 가게·정비점이라면 온라인으로 가입 신청하세요. 확인 후 승인되면 바로 주문할 수 있습니다.</p>
           </div>
-          {s?.phone && (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Button asChild className="h-11 bg-signal px-5 text-white hover:bg-signal/90">
-              <a href={`tel:${tel}`}>
-                <Phone /> {s.phone}
-              </a>
+              <a href={signup}>거래처 가입 신청</a>
             </Button>
-          )}
+            {s?.phone && (
+              <Button asChild variant="outline" className="h-11 border-white/30 bg-transparent px-5 text-white hover:bg-white/10 hover:text-white">
+                <a href={`tel:${tel}`}>
+                  <Phone /> {s.phone}
+                </a>
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 

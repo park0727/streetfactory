@@ -43,7 +43,7 @@ function NavList({ user, badges, onNavigate }: Props & { onNavigate?: () => void
                       <i.icon className="size-4 shrink-0 opacity-80" strokeWidth={1.75} />
                       {i.label}
                       {(badges?.[i.href] ?? 0) > 0 && (
-                        <span className="ml-auto flex items-center gap-1 rounded-full bg-status-critical px-1.5 text-[11px] font-bold leading-5 text-white" aria-label={`새 주문 ${badges![i.href]}건`}>
+                        <span className="ml-auto flex items-center gap-1 rounded-full bg-status-critical px-1.5 text-[11px] font-bold leading-5 text-white" aria-label={`새 알림 ${badges![i.href]}건`}>
                           N <span className="font-semibold">{badges![i.href]}</span>
                         </span>
                       )}

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/env";
 import { siteOf, siteUrl, type Site } from "@/lib/site";
 
-const PUBLIC_PATHS = ["/login", "/shop/login", "/intro"];
+const PUBLIC_PATHS = ["/login", "/shop/login", "/shop/signup", "/intro"];
 
 /**
  * 1) 주소별 화면 나누기 (src/lib/site.ts)
@@ -15,9 +15,12 @@ const PUBLIC_PATHS = ["/login", "/shop/login", "/intro"];
  * 권한(role/module) 검사는 여기서 하지 않고 각 페이지/액션에서 profiles 를 읽어 수행한다.
  */
 export async function proxy(request: NextRequest) {
-  const host = request.headers.get("host") ?? "";
+  const rawHost = request.headers.get("host") ?? "";
+  const local = /^(localhost|[^:]+\.localhost)(:|$)/.test(rawHost);
+  // 로컬 개발 서버는 서버 액션의 redirect 를 자기 주소(localhost:3000)로 다시 요청하므로 원래 주소(x-forwarded-host)를 쓴다.
+  // 운영에서는 클라이언트가 보낸 헤더를 믿지 않고 host 만 쓴다.
+  const host = (local && request.headers.get("x-forwarded-host")) || rawHost;
   const hostname = host.split(":")[0];
-  const local = hostname === "localhost" || hostname.endsWith(".localhost");
   const { pathname, search } = request.nextUrl;
   const go = (site: Site, path: string, status = 308) => NextResponse.redirect(siteUrl(host, site, path + search), status);
   const stripShop = (p: string) => p.replace(/^\/shop(?=\/|$)/, "") || "/";

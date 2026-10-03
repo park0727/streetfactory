@@ -36,7 +36,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         ilike(parts.manufacturer, `%${q}%`),
         ilike(brands.name, `%${q}%`),
         ilike(parts.tireSize, `%${q}%`),
-        ...(digits.length >= 3 ? [sql`regexp_replace(coalesce(${parts.tireSize}, ''), '\D', '', 'g') like ${`%${digits}%`}`] : []),
+        ...(digits.length >= 3 ? [sql`regexp_replace(coalesce(${parts.tireSize}, ''), '\\D', '', 'g') like ${`%${digits}%`}`] : []),
       )!,
     );
   }

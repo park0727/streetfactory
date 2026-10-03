@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { webOrders } from "@/db/schema";
+import { partnerApplications, webOrders } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { Sidebar, MobileHeader, MobileTabs } from "@/components/app-shell/sidebar";
 import { NewOrderAlert } from "@/components/app-shell/new-order-alert";
@@ -14,8 +14,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     if (!pathname.startsWith("/settings/profile")) redirect("/settings/profile");
   }
   const user = { name: profile.name, role: profile.role };
-  const [{ n: pendingOrders }] = await db.select({ n: sql<number>`count(*)::int` }).from(webOrders).where(eq(webOrders.status, "pending"));
-  const badges = { "/orders": pendingOrders };
+  const [[{ n: pendingOrders }], [{ n: pendingSignups }]] = await Promise.all([
+    db.select({ n: sql<number>`count(*)::int` }).from(webOrders).where(eq(webOrders.status, "pending")),
+    db.select({ n: sql<number>`count(*)::int` }).from(partnerApplications).where(eq(partnerApplications.status, "pending")),
+  ]);
+  const badges = { "/orders": pendingOrders, "/partners": pendingSignups };
   return (
     <div className="flex min-h-svh">
       <Sidebar user={user} badges={badges} />
@@ -23,7 +26,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <MobileHeader user={user} badges={badges} />
         <main className="flex-1 px-4 pt-5 pb-24 md:px-8 md:pt-7 md:pb-10">
           <div className="mx-auto w-full max-w-[1400px]">
-            <NewOrderAlert count={pendingOrders} />
+            <NewOrderAlert count={pendingOrders} signups={pendingSignups} />
             {children}
           </div>
         </main>

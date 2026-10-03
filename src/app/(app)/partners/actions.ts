@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { partners, salesOrders } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
+import { nextPartnerCode } from "@/lib/partner-code";
 import { dbErrorMessage, firstIssue, type ActionResult } from "@/lib/action-result";
 
 const schema = z.object({
@@ -43,9 +44,7 @@ export async function savePartner(_: unknown, fd: FormData): Promise<ActionResul
     if (id) await db.update(partners).set(values).where(eq(partners.id, id));
     else {
       await db.transaction(async (tx) => {
-        const r = await tx.execute(sql`select public.fn_next_seq('P', 0) as n`);
-        const n = Number((r as unknown as { n: number }[])[0]?.n ?? (r as unknown as { rows?: { n: number }[] }).rows?.[0]?.n);
-        await tx.insert(partners).values({ ...values, code: `P-${String(n).padStart(4, "0")}` });
+        await tx.insert(partners).values({ ...values, code: await nextPartnerCode(tx) });
       });
     }
   } catch (e) {
