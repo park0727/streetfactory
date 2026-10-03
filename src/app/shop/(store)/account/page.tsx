@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { shopLogout } from "../../actions";
 import { StatementList } from "./statement-list";
 import { ShopPasswordForm } from "./password-form";
-import { InstallApp } from "../../install-app";
+import { InstallApp } from "@/components/install-app";
 
 export const metadata = { title: "내 정보" };
 

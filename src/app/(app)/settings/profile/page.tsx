@@ -6,7 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { pushSubscriptions } from "@/db/schema";
 import { PushSetup } from "./push-setup";
-import { InstallApp } from "../../../shop/install-app";
+import { InstallApp } from "@/components/install-app";
 
 export const metadata = { title: "내 정보" };
 

@@ -2,19 +2,13 @@ import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { getCustomer, getShopSettings } from "@/lib/shop";
 import { ContactCall } from "../../contact-call";
-import { getProfile } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { shopLogout } from "../../actions";
-import { InstallApp } from "../../install-app";
-import { urlFor } from "@/lib/site-url";
+import { InstallApp } from "@/components/install-app";
 import { ShopLoginForm } from "./form";
 
 export const metadata = { title: "로그인" };
 
 export default async function ShopLoginPage() {
   if (await getCustomer()) redirect("/");
-  const adminHome = await urlFor("admin");
-  const staff = await getProfile();
   const settings = await getShopSettings();
   return (
     <main className="flex min-h-svh flex-col bg-sidebar text-sidebar-foreground">
@@ -29,24 +23,10 @@ export default async function ShopLoginPage() {
       </div>
       <div className="rounded-t-2xl bg-card px-6 pt-7 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-foreground">
         <div className="mx-auto w-full max-w-sm">
-          {staff ? (
-            <div className="space-y-3">
-              <p className="text-[15px] font-medium">{staff.name}님은 직원 계정으로 로그인되어 있습니다.</p>
-              <p className="text-sm text-steel">주문 화면은 거래처 계정으로 들어갑니다. 업무 화면으로 돌아가거나, 로그아웃한 뒤 거래처 계정으로 로그인하세요.</p>
-              <Button asChild className="h-11 w-full text-base">
-                <a href={adminHome}>관리자 화면으로 돌아가기</a>
-              </Button>
-              <form action={shopLogout}>
-                <Button type="submit" variant="outline" className="h-11 w-full text-base">로그아웃하고 거래처 계정으로 로그인</Button>
-              </form>
-            </div>
-          ) : (
-            <ShopLoginForm />
-          )}
+          <ShopLoginForm />
           <InstallApp className="mt-4" />
           <p className="mt-6 text-xs text-steel">계정이 없거나 비밀번호를 잊었으면 라이더매니아 담당자에게 연락하세요.</p>
           <ContactCall phone={settings?.phone} className="mt-2 text-sm" />
-          <a href={`${adminHome}login`} className="mt-3 inline-block text-xs text-steel underline underline-offset-2">라이더매니아 직원이신가요? 관리자 화면으로</a>
         </div>
       </div>
     </main>

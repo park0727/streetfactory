@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: { absolute: "라이더매니아 · 오토바이 수리 · 수입 부품" },
   description: "오토바이 수리와 수입 타이어·부품 도매. 거래처는 온라인으로 바로 주문할 수 있습니다.",
   manifest: null,
+  robots: { index: true, follow: true },
   appleWebApp: { capable: false },
   icons: { icon: "/shop-icon-192.png", apple: "/shop-icon-180.png" },
 };
@@ -22,7 +23,7 @@ const FEATURES = [
 ];
 
 export default async function IntroPage() {
-  const [s, shop, admin] = await Promise.all([getShopSettings(), urlFor("shop"), urlFor("admin")]);
+  const [s, shop] = await Promise.all([getShopSettings(), urlFor("shop")]);
   const company = s?.companyName || "라이더매니아";
   const tel = s?.phone?.replace(/[^0-9]/g, "");
   return (
@@ -87,7 +88,7 @@ export default async function IntroPage() {
       </section>
 
       <footer className="mt-auto border-t bg-card">
-        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-5 py-6 text-[12.5px] text-steel sm:flex-row sm:items-end sm:justify-between">
+        <div className="mx-auto flex max-w-5xl flex-col gap-3 px-5 py-6 text-[12.5px] text-steel ">
           <div className="space-y-0.5">
             <p className="font-medium text-foreground">{company}</p>
             <p>
@@ -96,9 +97,6 @@ export default async function IntroPage() {
             {s?.address && <p>{s.address}</p>}
             {s?.phone && <p>전화 {s.phone}</p>}
           </div>
-          <a href={admin} className="text-[12px] underline underline-offset-2">
-            직원 로그인
-          </a>
         </div>
       </footer>
     </main>

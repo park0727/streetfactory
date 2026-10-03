@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { BellRing, BellOff, Send, Smartphone, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { InstallApp, useInstallEnv } from "../../../shop/install-app";
+import { InstallApp, useInstallEnv } from "@/components/install-app";
 import { removeMyDevice, removePushSubscription, savePushSubscription, sendTestPush } from "./push-actions";
 
 type Device = { id: number; device: string | null; createdAt: string; lastSuccessAt: string | null; endpoint: string };

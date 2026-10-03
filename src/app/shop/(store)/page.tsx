@@ -10,7 +10,7 @@ import { int, str } from "@/lib/query-params";
 import { CatalogFilters } from "./catalog-filters";
 import { ProductRow } from "./product-row";
 import { LoadMore } from "./load-more";
-import { InstallApp } from "../install-app";
+import { InstallApp } from "@/components/install-app";
 import { ContactCall } from "../contact-call";
 
 export const metadata = { title: "상품" };

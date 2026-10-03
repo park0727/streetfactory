@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: { default: "라이더매니아", template: "%s · 라이더매니아" },
   description: "수입 오토바이 부품 재고·판매·거래처 관리",
   manifest: "/admin.webmanifest",
+  robots: { index: false, follow: false },
   appleWebApp: { capable: true, title: "RM 관리", statusBarStyle: "black-translucent" },
   icons: { icon: "/admin-icon-192.png", apple: "/admin-icon-180.png" },
 };

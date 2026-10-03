@@ -46,9 +46,13 @@ function useEnv() {
   );
 }
 
+/**
+ * 앱 설치는 주소별로 따로다 (shop. = 주문 앱, admin. = 관리 앱). 각 주소의 manifest·서비스 워커·아이콘을 쓴다.
+ * 이 컴포넌트는 해당 주소의 화면 안에서만 쓴다 (다른 주소의 앱을 설치시킬 수 없다).
+ */
 const APPS = {
-  shop: { sw: "/shop-sw.js", scope: "/", path: "/", name: "라이더매니아", what: "주문 화면" },
-  admin: { sw: "/admin-sw.js", scope: "/", path: "/", name: "RM 관리", what: "관리자 화면" },
+  shop: { sw: "/shop-sw.js", scope: "/", path: "/", name: "라이더매니아", what: "주문 화면", icon: "/shop-icon-192.png" },
+  admin: { sw: "/admin-sw.js", scope: "/", path: "/", name: "RM 관리", what: "관리자 화면", icon: "/admin-icon-192.png" },
 } as const;
 type App = keyof typeof APPS;
 
@@ -82,7 +86,7 @@ export function InstallApp({ variant = "button", className, app = "shop" }: { va
     () => () => {},
     () => {
       try {
-        return Number(localStorage.getItem("sf-install-dismissed") ?? 0) > Date.now() - 7 * 864e5;
+        return Number(localStorage.getItem(`sf-install-dismissed-${app}`) ?? 0) > Date.now() - 7 * 864e5;
       } catch {
         return false;
       }
@@ -90,7 +94,8 @@ export function InstallApp({ variant = "button", className, app = "shop" }: { va
     () => true,
   );
 
-  if (env === "installed" || env === "desktop") return null;
+  // PC 는 크롬·엣지가 설치를 지원할 때(설치 신호를 받았을 때)만 버튼을 보인다
+  if (env === "installed" || (env === "desktop" && !canPrompt)) return null;
   if (variant === "banner" && (hidden || dismissedRecently)) return null;
 
   async function onClick() {
@@ -105,14 +110,14 @@ export function InstallApp({ variant = "button", className, app = "shop" }: { va
     setGuide(true);
   }
 
-  const label = env.startsWith("inapp") ? "인터넷 앱으로 열고 홈 화면에 추가" : "홈 화면에 앱으로 추가";
+  const label = env.startsWith("inapp") ? "인터넷 앱으로 열고 홈 화면에 추가" : env === "desktop" ? `${cfg.what}을 PC 앱으로 설치` : "홈 화면에 앱으로 추가";
 
   return (
     <>
       {variant === "banner" ? (
         <div className={cn("flex items-center gap-3 rounded-md border border-primary/25 bg-primary/5 px-3 py-2.5", className)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- 정적 아이콘 */}
-          <img src="/shop-icon-192.png" alt="" className="size-10 shrink-0 rounded-lg" />
+          <img src={cfg.icon} alt="" className="size-10 shrink-0 rounded-lg" />
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-medium">앱처럼 쓰기</p>
             <p className="text-[12px] text-steel">홈 화면에 아이콘을 만들어 두면 다음부터 바로 열립니다.</p>
@@ -126,7 +131,7 @@ export function InstallApp({ variant = "button", className, app = "shop" }: { va
             aria-label="닫기"
             onClick={() => {
               try {
-                localStorage.setItem("sf-install-dismissed", String(Date.now()));
+                localStorage.setItem(`sf-install-dismissed-${app}`, String(Date.now()));
               } catch {}
               setHidden(true);
             }}

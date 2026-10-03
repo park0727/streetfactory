@@ -91,6 +91,8 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
   - `shop.ridermania.co.kr` 거래처 주문. 보이는 주소 `/cart` 를 내부 경로 `/shop/cart` 로 rewrite. **주문 화면 안 링크·redirect 는 `/shop` 없이** 쓴다 (`/shop/...` 로 오면 308 로 벗긴다).
   - `admin.ridermania.co.kr` 관리자. `/shop/*` 은 shop. 으로 보낸다.
   - 다른 화면으로 가는 링크는 서버에서 `urlFor(site, path)`(`src/lib/site-url.ts`) 로 절대 주소를 만들고 `<a>` 를 쓴다 (`<Link>` 아님).
+  - **관리자 화면(admin.)으로 가는 링크는 어디에도 두지 않는다** (회사 소개·주문 화면·오류 안내 포함). 직원은 주소 직접 입력이나 설치한 앱 아이콘으로만 들어온다.
+  - 앱 설치는 주소별로 따로: `src/components/install-app.tsx` 의 `app="shop"`(주문 화면 안) / `app="admin"`(관리자 로그인·내 정보). 회사 소개는 설치 대상 아님(manifest 없음). 검색 노출은 회사 소개만.
   - 로그인 쿠키는 주소마다 따로라 직원·거래처 세션이 섞이지 않는다.
 - 로컬도 같은 규칙: `http://localhost:3000`(소개), `http://shop.localhost:3000`, `http://admin.localhost:3000`.
 - 앱 Worker 이름은 `ridermania` (`wrangler.jsonc`). 옛 `streetfactory` Worker 는 301 리다이렉트 전용이다. 거기에 앱을 다시 배포하지 않는다.
