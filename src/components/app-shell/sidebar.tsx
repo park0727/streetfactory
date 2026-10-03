@@ -109,8 +109,9 @@ export function MobileHeader({ user, badges }: Props) {
   const setOpen = (o: boolean) => setOpenedAt(o ? pathname : null);
   return (
     <header
-      className="sticky z-30 flex h-12 items-center gap-1 bg-sidebar px-2 text-sidebar-foreground md:hidden"
-      style={{ top: "env(safe-area-inset-top, 0px)" }}
+      className="sticky top-0 z-30 flex items-center gap-1 bg-sidebar px-2 text-sidebar-foreground md:hidden"
+      // 아이폰은 상태 표시줄 높이(safe-area)를 알려 준다. top 으로 밀면 본문을 가리므로 바 안쪽 여백으로 채운다
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)", height: "calc(3rem + env(safe-area-inset-top, 0px))" }}
     >
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
