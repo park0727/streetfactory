@@ -21,6 +21,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const q = str(sp, "q");
   const cat = int(sp, "cat", 0);
+  const brand = int(sp, "brand", 0);
   const limit = int(sp, "n", PAGE);
 
   const conds: SQL[] = [eq(parts.online, true), ne(parts.status, "discontinued")];
@@ -40,6 +41,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     );
   }
   if (cat) conds.push(eq(parts.categoryId, cat));
+  if (brand) conds.push(eq(parts.brandId, brand));
   const where = and(...conds);
 
   const [rows, [{ total }], cats, settings, rules] = await Promise.all([
@@ -80,23 +82,31 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
 
 
   const today = todayKST();
-  const ads = await db
-    .select({ id: banners.id, imageUrl: banners.imageUrl, title: banners.title, linkUrl: banners.linkUrl })
-    .from(banners)
-    .where(and(eq(banners.active, true), sql`(${banners.startsOn} is null or ${banners.startsOn} <= ${today}) and (${banners.endsOn} is null or ${banners.endsOn} >= ${today})`))
-    .orderBy(asc(banners.sortOrder), asc(banners.id));
+  const [ads, brandList] = await Promise.all([
+    db
+      .select({ id: banners.id, imageUrl: banners.imageUrl, title: banners.title, linkUrl: banners.linkUrl })
+      .from(banners)
+      .where(and(eq(banners.active, true), sql`(${banners.startsOn} is null or ${banners.startsOn} <= ${today}) and (${banners.endsOn} is null or ${banners.endsOn} >= ${today})`))
+      .orderBy(asc(banners.sortOrder), asc(banners.id)),
+    // 고른 카테고리 안에 주문 가능한 상품이 있는 브랜드만 (눌렀을 때 빈 목록이 나오지 않게)
+    db
+      .selectDistinct({ id: brands.id, name: brands.name, logoUrl: brands.logoUrl, sortOrder: brands.sortOrder })
+      .from(brands)
+      .innerJoin(parts, and(eq(parts.brandId, brands.id), eq(parts.online, true), ne(parts.status, "discontinued"), cat ? eq(parts.categoryId, cat) : undefined))
+      .orderBy(asc(brands.sortOrder), asc(brands.name)),
+  ]);
 
   return (
     <div className="space-y-3">
-      {!q && !cat && <BannerCarousel items={ads} />}
+      {!q && !cat && !brand && <BannerCarousel items={ads} />}
       <InstallApp variant="banner" />
       {settings?.shopNotice && <p className="rounded-md border border-signal/30 bg-signal/5 px-3 py-2 text-[13px] whitespace-pre-line">{settings.shopNotice}</p>}
-      <CatalogFilters cats={cats.map((c) => ({ id: c.id, name: c.name }))} />
+      <CatalogFilters cats={cats.map((c) => ({ id: c.id, name: c.name }))} brands={brandList.map((b) => ({ id: b.id, name: b.name, logoUrl: b.logoUrl }))} />
       <p className="text-[12px] text-steel">{total.toLocaleString()}개 상품</p>
       {rows.length === 0 ? (
         <div className="rounded-md border bg-card px-6 py-14 text-center">
           <p className="text-sm font-medium">조건에 맞는 상품이 없습니다</p>
-          <p className="mt-1 text-[13px] text-steel">검색어를 바꾸거나 다른 카테고리를 골라 보세요.</p>
+          <p className="mt-1 text-[13px] text-steel">검색어를 바꾸거나 다른 카테고리·브랜드를 골라 보세요.</p>
         </div>
       ) : (
         <ul className="divide-y overflow-hidden rounded-md border bg-card">
