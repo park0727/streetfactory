@@ -95,7 +95,7 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
   - 앱 설치는 주소별로 따로: `src/components/install-app.tsx` 의 `app="shop"`(주문 화면 안) / `app="admin"`(관리자 로그인·내 정보). 회사 소개는 설치 대상 아님(manifest 없음). 검색 노출은 회사 소개만.
   - 로그인 쿠키는 주소마다 따로라 직원·거래처 세션이 섞이지 않는다.
 - 로컬도 같은 규칙: `http://localhost:3000`(소개), `http://shop.localhost:3000`, `http://admin.localhost:3000`. 로컬 dev 는 서버 액션 redirect 를 localhost:3000 으로 다시 요청하므로 proxy 가 로컬에서만 `x-forwarded-host` 를 본다.
-- 앱 Worker 이름은 `ridermania` (`wrangler.jsonc`). 옛 `streetfactory` Worker 는 301 리다이렉트 전용이다. 거기에 앱을 다시 배포하지 않는다.
+- 앱 Worker 이름은 `ridermania` (`wrangler.jsonc`). 옛 `streetfactory` Worker 는 2026-10-05 에 삭제했다.
 - 프로덕션 비밀값: DATABASE_URL, SUPABASE_SECRET_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, VAPID_PRIVATE_KEY.
 - 이미지 업로드 버킷은 `scripts/setup-storage.mjs` 로 만든다.
 
