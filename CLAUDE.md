@@ -57,6 +57,7 @@ npm run preview      # Workers 런타임으로 로컬 실행
 - **판매가는 부가세 포함가**로 정하고 받는다 (2026-10-16 전환). 부품 마스터 가격(권장소비자가·도매가·온라인 판매가)과 출고 등록 단가 입력은 포함가.
   판매 라인 `unit_price` = 공급가(포함가 ÷ 1.1 반올림), `unit_price_gross` = 포함가. 전표 총액 = Σ 수량 × 포함가, 부가세 = 총액 − 공급가.
   계산은 `src/lib/vat.ts`(`supplyOf`·`docTotals`·`grossOf`) 와 `v_sales_settlement` 뷰가 같은 규칙. `× 1.1` 을 화면 코드에 새로 쓰지 않는다.
+  원가도 부가세 포함으로 입력한다. 이익 = 공급가 − 원가 ÷ 1.1 (`costExVat`, SQL 은 `src/lib/profit-sql.ts` 의 `lineProfit`). 재고 평가액은 원가 그대로.
   거래처 `default_vat` 는 가격과 무관한 '세금계산서 발행 대상' 표시다. 원화 정수, 원가 소수 2자리, 외화·환율 소수 4자리.
 - **엑셀 생성·파싱은 브라우저에서** (Workers CPU 10ms 제한). 서버는 JSON 만 받는다.
 - DB 접근은 서버(Server Action / RSC) 에서 Drizzle 로만. 브라우저에서 supabase-js 로 테이블 접근 금지 (RLS 로 차단되어 있음).

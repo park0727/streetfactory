@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { lineProfit } from "@/lib/profit-sql";
 import {
   and,
   asc,
@@ -81,7 +82,7 @@ export default async function SalesLedgerPage({
           "amount",
         ),
       profit:
-        sql<number>`sum(${salesLines.qty} * (${salesLines.unitPrice} - ${salesLines.unitCost}))::numeric`.as(
+        sql<number>`sum(${lineProfit})::numeric`.as(
           "profit",
         ),
     })

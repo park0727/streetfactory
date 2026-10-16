@@ -28,7 +28,7 @@ export function LedgerExportButton() {
           { header: "출고수량", key: "qty", width: 9, numFmt: "0" },
           { header: "출고단가", key: "unitPrice", width: 12, numFmt: "#,##0" },
           { header: "총매출액", key: "amount", width: 13, numFmt: "#,##0" },
-          { header: "적용원가", key: "unitCost", width: 12, numFmt: "#,##0" },
+          { header: "원가(부가세 제외)", key: "unitCost", width: 12, numFmt: "#,##0" },
           { header: "매출이익", key: "profit", width: 13, numFmt: "#,##0" },
           { header: "판매채널", key: "channel", width: 10 },
         ],

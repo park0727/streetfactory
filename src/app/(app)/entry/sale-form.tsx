@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/combobox";
 import { krw, pct, num } from "@/lib/format";
-import { supplyOf } from "@/lib/vat";
+import { costExVat, supplyOf } from "@/lib/vat";
 import { PAYMENT_METHOD, PAYMENT_TERMS, type PaymentMethod, type PaymentTerms } from "@/lib/payments-shared";
 import { PartPicker, StockHint, } from "./part-picker";
 import { createSale, updateSale, type PartHit } from "./actions";
@@ -62,14 +62,14 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
   if (initial) for (const l of initial.lines) held.set(l.part.id, (held.get(l.part.id) ?? 0) + l.qty);
   const [pending, start] = useTransition();
 
-  // 단가는 부가세 포함가로 입력한다. 이익은 공급가(포함가 ÷ 1.1) − 원가.
+  // 단가·원가 모두 부가세 포함으로 입력한다. 이익 = 공급가(포함가 ÷ 1.1) − 원가 ÷ 1.1.
   const totals = useMemo(() => {
     let amount = 0, supply = 0, cost = 0, qty = 0;
     for (const l of lines) {
       if (!l.part) continue;
       amount += l.qty * l.unitPrice;
       supply += l.qty * supplyOf(l.unitPrice);
-      cost += l.qty * l.part.avgCost;
+      cost += l.qty * costExVat(l.part.avgCost);
       qty += l.qty;
     }
     const profit = supply - cost;
@@ -265,7 +265,7 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
           <Sum label="예상 매출이익" value={krw(totals.profit)} tone={totals.profit < 0 ? "critical" : undefined} />
           <Sum label="마진율" value={pct(totals.margin)} tone={totals.margin < 0 ? "critical" : undefined} />
         </dl>
-        <p className="mt-2 text-[11.5px] text-steel">단가는 부가세 포함가입니다. 이익은 공급가(포함가 ÷ 1.1)에서 현재 평균원가를 뺀 예상치이며, 저장 시점 원가가 전표에 고정됩니다.</p>
+        <p className="mt-2 text-[11.5px] text-steel">단가는 부가세 포함가입니다. 이익은 부가세를 뺀 판매가에서 부가세를 뺀 평균원가를 뺀 예상치(마진의 약 10%가 부가세로 빠짐)이며, 저장 시점 원가가 전표에 고정됩니다.</p>
       </div>
 
       {anyShort && (

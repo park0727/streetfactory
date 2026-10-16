@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { lineProfit } from "@/lib/profit-sql";
 import { and, asc, desc, eq, gte, lte, ne, sql } from "drizzle-orm";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/db";
@@ -25,7 +26,7 @@ export default async function DashboardPage() {
     db
       .select({
         amount: sql<number>`coalesce(sum(${salesLines.qty} * ${salesLines.unitPrice}), 0)::numeric`,
-        profit: sql<number>`coalesce(sum(${salesLines.qty} * (${salesLines.unitPrice} - ${salesLines.unitCost})), 0)::numeric`,
+        profit: sql<number>`coalesce(sum(${lineProfit}), 0)::numeric`,
         orders: sql<number>`count(distinct ${salesOrders.id})::int`,
       })
       .from(salesLines)
@@ -49,7 +50,7 @@ export default async function DashboardPage() {
       .select({
         month: sql<string>`to_char(${salesOrders.docDate}, 'YYYY-MM')`,
         amount: sql<number>`coalesce(sum(${salesLines.qty} * ${salesLines.unitPrice}), 0)::numeric`,
-        profit: sql<number>`coalesce(sum(${salesLines.qty} * (${salesLines.unitPrice} - ${salesLines.unitCost})), 0)::numeric`,
+        profit: sql<number>`coalesce(sum(${lineProfit}), 0)::numeric`,
       })
       .from(salesLines)
       .innerJoin(salesOrders, eq(salesOrders.id, salesLines.orderId))

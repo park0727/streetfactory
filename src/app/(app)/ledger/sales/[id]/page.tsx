@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { costExVat } from "@/lib/vat";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, Printer } from "lucide-react";
@@ -61,7 +62,7 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
       .orderBy(asc(payments.paidAt), asc(payments.id)),
   ]);
   const amount = lines.reduce((a, l) => a + l.qty * l.unitPrice, 0);
-  const cost = lines.reduce((a, l) => a + l.qty * l.unitCost, 0);
+  const cost = lines.reduce((a, l) => a + l.qty * costExVat(l.unitCost), 0);
   const profit = amount - cost;
 
   return (
@@ -96,7 +97,7 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
                 <TableHead className="th-label">부품명</TableHead>
                 <TableHead className="th-label w-[60px] text-right">수량</TableHead>
                 <TableHead className="th-label w-[110px] text-right">출고단가 (공급가)</TableHead>
-                <TableHead className="th-label w-[110px] text-right">적용원가</TableHead>
+                <TableHead className="th-label w-[110px] text-right">원가 (부가세 제외)</TableHead>
                 <TableHead className="th-label w-[120px] text-right">매출액 (공급가)</TableHead>
                 <TableHead className="th-label w-[110px] text-right">이익</TableHead>
               </TableRow>
@@ -112,9 +113,9 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
                   </TableCell>
                   <TableCell className="tabular text-right">{num(l.qty)}</TableCell>
                   <TableCell className="tabular text-right">{krw(l.unitPrice)}</TableCell>
-                  <TableCell className="tabular text-right text-steel">{krw(l.unitCost)}</TableCell>
+                  <TableCell className="tabular text-right text-steel">{krw(costExVat(l.unitCost))}</TableCell>
                   <TableCell className="tabular text-right font-medium">{krw(l.qty * l.unitPrice)}</TableCell>
-                  <TableCell className="tabular text-right">{krw(l.qty * (l.unitPrice - l.unitCost))}</TableCell>
+                  <TableCell className="tabular text-right">{krw(l.qty * (l.unitPrice - costExVat(l.unitCost)))}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

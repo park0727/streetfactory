@@ -18,3 +18,10 @@ export function docTotals(lines: DocLine[], vatApplied: boolean) {
 
 /** 라인의 포함 단가 (옛 전표는 공급가에서 되살린다) */
 export const grossOf = (l: DocLine, vatApplied: boolean) => (l.unitPriceGross != null ? Number(l.unitPriceGross) : vatApplied ? Math.round(Number(l.unitPrice) * 1.1) : Number(l.unitPrice));
+
+/**
+ * 원가는 부가세 포함으로 입력한다 (수입 부가세·수수료 부가세 포함, 사용자 결정).
+ * 매입 부가세는 신고 때 공제받으므로 이익 = 공급가 − 원가 ÷ 1.1. 재고 평가액은 입력한 원가 그대로 둔다.
+ * SQL 쪽은 src/lib/profit-sql.ts 가 같은 규칙.
+ */
+export const costExVat = (cost: number) => Number(cost) / 1.1;
