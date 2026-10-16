@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { docTotals, grossOf } from "@/lib/vat";
 import { krw, num } from "@/lib/format";
 import { cancelWebOrder, shipWebOrder } from "../actions";
 
-type Line = { id: number; lineNo: number; code: string; name: string; spec: string | null; qty: number; unitPrice: number; stock: number };
+type Line = { id: number; lineNo: number; code: string; name: string; spec: string | null; qty: number; unitPrice: number; unitPriceGross: number | null; stock: number };
 
 export function ProcessOrder({ orderId, orderNo, pending, vatApplied, today, lines }: { orderId: number; orderNo: string; pending: boolean; vatApplied: boolean; today: string; lines: Line[] }) {
   const router = useRouter();
@@ -22,8 +23,10 @@ export function ProcessOrder({ orderId, orderNo, pending, vatApplied, today, lin
   const [pendingShip, startShip] = useTransition();
   const [pendingCancel, startCancel] = useTransition();
 
-  const supply = lines.reduce((a, l) => a + (qty[l.id] ?? 0) * l.unitPrice, 0);
-  const total = vatApplied ? Math.round(supply * 1.1) : supply;
+  const { supply, vat, total } = docTotals(
+    lines.map((l) => ({ ...l, qty: qty[l.id] ?? 0 })),
+    vatApplied,
+  );
   const changed = lines.some((l) => qty[l.id] !== l.qty);
   const short = lines.filter((l) => (qty[l.id] ?? 0) > l.stock);
 
@@ -62,8 +65,8 @@ export function ProcessOrder({ orderId, orderNo, pending, vatApplied, today, lin
                       <span className="tabular">{num(l.qty)}</span>
                     )}
                   </TableCell>
-                  <TableCell className="tabular text-right">{krw(l.unitPrice)}</TableCell>
-                  <TableCell className="tabular text-right font-medium">{krw(q * l.unitPrice)}</TableCell>
+                  <TableCell className="tabular text-right">{krw(grossOf(l, vatApplied))}</TableCell>
+                  <TableCell className="tabular text-right font-medium">{krw(q * grossOf(l, vatApplied))}</TableCell>
                 </TableRow>
               );
             })}
@@ -71,7 +74,8 @@ export function ProcessOrder({ orderId, orderNo, pending, vatApplied, today, lin
         </Table>
         <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 border-t px-4 py-3 text-[13px]">
           <span className="text-steel">공급가 <b className="tabular text-foreground">{krw(supply)}</b></span>
-          <span className="text-steel">받을 금액 <b className="tabular text-[15px] text-foreground">{krw(total)}</b> {vatApplied ? "(부가세 포함)" : "(부가세 없음)"}</span>
+          <span className="text-steel">부가세 <b className="tabular text-foreground">{krw(vat)}</b></span>
+          <span className="text-steel">받을 금액 <b className="tabular text-[15px] text-foreground">{krw(total)}</b> (부가세 포함)</span>
         </div>
       </div>
 

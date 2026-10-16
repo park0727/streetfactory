@@ -95,9 +95,9 @@ export default async function SaleDetailPage({ params }: PageProps<"/ledger/sale
                 <TableHead className="th-label w-[120px]">부품코드</TableHead>
                 <TableHead className="th-label">부품명</TableHead>
                 <TableHead className="th-label w-[60px] text-right">수량</TableHead>
-                <TableHead className="th-label w-[110px] text-right">출고단가</TableHead>
+                <TableHead className="th-label w-[110px] text-right">출고단가 (공급가)</TableHead>
                 <TableHead className="th-label w-[110px] text-right">적용원가</TableHead>
-                <TableHead className="th-label w-[120px] text-right">매출액</TableHead>
+                <TableHead className="th-label w-[120px] text-right">매출액 (공급가)</TableHead>
                 <TableHead className="th-label w-[110px] text-right">이익</TableHead>
               </TableRow>
             </TableHeader>

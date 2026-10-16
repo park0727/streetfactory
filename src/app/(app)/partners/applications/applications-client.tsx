@@ -253,7 +253,7 @@ function ApproveDialog({ app, partners, onClose }: { app: AppRow; partners: Part
                 </Select>
               </div>
               <label className="flex items-center gap-2 self-end pb-2 text-[13.5px]">
-                <input type="checkbox" className="size-4" checked={p.defaultVat} onChange={(e) => set("defaultVat", e.target.checked)} /> 부가세 별도 청구 (세금계산서)
+                <input type="checkbox" className="size-4" checked={p.defaultVat} onChange={(e) => set("defaultVat", e.target.checked)} /> 세금계산서 발행 대상
               </label>
             </div>
           )}

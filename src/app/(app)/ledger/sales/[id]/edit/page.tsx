@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/db";
+import { grossOf } from "@/lib/vat";
 import { partners, salesChannels, salesLines, salesOrders, vSalesSettlement } from "@/db/schema";
 import { requireModule } from "@/lib/auth";
 import { todayKST } from "@/lib/dates";
@@ -21,7 +22,7 @@ export default async function EditSalePage({ params }: PageProps<"/ledger/sales/
   const [o] = await db.select().from(salesOrders).where(eq(salesOrders.id, orderId));
   if (!o) notFound();
   const [lines, ps, cs] = await Promise.all([
-    db.select({ partId: salesLines.partId, qty: salesLines.qty, unitPrice: salesLines.unitPrice }).from(salesLines).where(eq(salesLines.orderId, orderId)).orderBy(asc(salesLines.lineNo)),
+    db.select({ partId: salesLines.partId, qty: salesLines.qty, unitPrice: salesLines.unitPrice, unitPriceGross: salesLines.unitPriceGross }).from(salesLines).where(eq(salesLines.orderId, orderId)).orderBy(asc(salesLines.lineNo)),
     db.select({ id: partners.id, name: partners.name, type: partners.type, code: partners.code, defaultTerms: partners.defaultTerms, defaultVat: partners.defaultVat }).from(partners).orderBy(asc(partners.name)),
     db.select({ name: salesChannels.name }).from(salesChannels).orderBy(asc(salesChannels.sortOrder)),
   ]);
@@ -34,11 +35,10 @@ export default async function EditSalePage({ params }: PageProps<"/ledger/sales/
     partnerId: o.partnerId,
     channel: o.channel,
     memo: o.memo,
-    vatApplied: o.vatApplied,
     taxInvoiceIssued: o.taxInvoiceIssued,
     dueDate: o.dueDate,
     paid: Number(st?.paid ?? 0),
-    lines: lines.filter((l) => hits.has(l.partId)).map((l) => ({ part: hits.get(l.partId)!, qty: l.qty, unitPrice: l.unitPrice })),
+    lines: lines.filter((l) => hits.has(l.partId)).map((l) => ({ part: hits.get(l.partId)!, qty: l.qty, unitPrice: grossOf(l, o.vatApplied) })), // 입력 칸은 포함가
   };
   return (
     <>

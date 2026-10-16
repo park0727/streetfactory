@@ -134,13 +134,13 @@ export function PartDialog({ open, onClose, part, cats, sups, brands }: Props) {
             <Field label="표준수입원가 (₩)" htmlFor="p-cost" className="sm:col-span-2">
               <Input id="p-cost" name="standardCost" type="number" min={0} step={1} defaultValue={part?.standardCost ?? ""} className="tabular text-right" />
             </Field>
-            <Field label="권장소비자가 (₩)" htmlFor="p-price" className="sm:col-span-2">
+            <Field label="권장소비자가 (₩, 부가세 포함)" htmlFor="p-price" className="sm:col-span-2">
               <Input id="p-price" name="retailPrice" type="number" min={0} step={1} defaultValue={part?.retailPrice ?? ""} className="tabular text-right" />
             </Field>
-            <Field label="온라인 판매가 (₩)" htmlFor="p-online" className="sm:col-span-2" hint="주문 화면 정가, 비우면 소비자가">
+            <Field label="온라인 판매가 (₩, 부가세 포함)" htmlFor="p-online" className="sm:col-span-2" hint="주문 화면 정가, 비우면 소비자가">
               <Input id="p-online" name="onlinePrice" type="number" min={0} step={1} defaultValue={part?.onlinePrice || ""} className="tabular text-right" />
             </Field>
-            <Field label="도매가 (₩)" htmlFor="p-whole" className="sm:col-span-2" hint="도매 거래처용, 비우면 소비자가">
+            <Field label="도매가 (₩, 부가세 포함)" htmlFor="p-whole" className="sm:col-span-2" hint="도매 거래처용, 비우면 소비자가">
               <Input id="p-whole" name="wholesalePrice" type="number" min={0} step={1} defaultValue={part?.wholesalePrice || ""} className="tabular text-right" />
             </Field>
             <Field label="안전재고" htmlFor="p-safety" className="sm:col-span-1">

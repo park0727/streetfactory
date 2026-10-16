@@ -85,6 +85,20 @@
       "when": 1791009568086,
       "tag": "0011_partner_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792130713113,
+      "tag": "0012_unit_price_gross",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792130714005,
+      "tag": "0013_settlement_gross",
+      "breakpoints": true
     }
   ]
 }

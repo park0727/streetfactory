@@ -49,12 +49,15 @@ npm run preview      # Workers 런타임으로 로컬 실행
 - **판매·입고 확정은 DB 함수로만** 한다: `fn_post_sale`, `fn_post_inbound`, 취소는 `fn_unpost_*`. 앱 코드에서 stock_movements 를 직접 insert 하지 않는다 (실사 조정 `adjustment` 제외). 전표 수정 = 트랜잭션 안에서 unpost → 라인 교체 → post (전표번호 유지).
 - 수정·삭제 권한은 부품 모듈 사용자 전체 (소규모 팀). 사용자 관리만 admin 전용.
 - 저장·삭제 성공 시 `useActionToast` / `ConfirmButton` 이 `router.refresh()` 를 호출한다. 목록 갱신을 위해 별도 처리하지 않아도 된다.
-- **미수금은 `payments` 합계로만 계산**한다 (`v_sales_settlement`). 전표에 결제상태 컬럼을 두지 않는다. 총액은 `vat_applied` 면 공급가 × 1.1.
+- **미수금은 `payments` 합계로만 계산**한다 (`v_sales_settlement`). 전표에 결제상태 컬럼을 두지 않는다. 총액은 라인 포함가 합계 (포함가 없는 옛 전표만 `vat_applied` 면 공급가 × 1.1).
 - 인쇄 페이지(`src/app/(print)`) 에는 원가·이익을 절대 넣지 않는다 (배달 기사용).
 - 판매 라인 `unit_price`/`unit_cost` 는 스냅샷이다. 마스터 변경으로 소급 수정하지 않는다.
 - `parts.code` 는 수정 불가. 삭제 대신 `status = discontinued`.
 - 전표번호는 `fn_next_seq(prefix, year)` 로 채번. 앱에서 max+1 하지 않는다.
-- 금액은 공급가액(부가세 별도) 저장. 원화 정수, 원가 소수 2자리, 외화·환율 소수 4자리.
+- **판매가는 부가세 포함가**로 정하고 받는다 (2026-10-16 전환). 부품 마스터 가격(권장소비자가·도매가·온라인 판매가)과 출고 등록 단가 입력은 포함가.
+  판매 라인 `unit_price` = 공급가(포함가 ÷ 1.1 반올림), `unit_price_gross` = 포함가. 전표 총액 = Σ 수량 × 포함가, 부가세 = 총액 − 공급가.
+  계산은 `src/lib/vat.ts`(`supplyOf`·`docTotals`·`grossOf`) 와 `v_sales_settlement` 뷰가 같은 규칙. `× 1.1` 을 화면 코드에 새로 쓰지 않는다.
+  거래처 `default_vat` 는 가격과 무관한 '세금계산서 발행 대상' 표시다. 원화 정수, 원가 소수 2자리, 외화·환율 소수 4자리.
 - **엑셀 생성·파싱은 브라우저에서** (Workers CPU 10ms 제한). 서버는 JSON 만 받는다.
 - DB 접근은 서버(Server Action / RSC) 에서 Drizzle 로만. 브라우저에서 supabase-js 로 테이블 접근 금지 (RLS 로 차단되어 있음).
 - 권한: `admin` / `staff`, 모듈 플래그 `can_parts` / `can_repair`. 검사는 `src/lib/auth.ts` 헬퍼로.
@@ -103,7 +106,7 @@ drizzle/                   마이그레이션 (0000 스키마, 0001 뷰·함수�
 - 고객 인증은 `src/lib/shop.ts` 의 `getCustomer` / `requireCustomer`. 직원 헬퍼(`requireUser`)와 섞지 않는다. 고객 데이터 조회는 항상 `partnerId = me.partnerId` 로 제한한다.
 - 고객에게 재고 수량·원가를 절대 내려보내지 않는다. 표시는 `availability()` 의 3단계만.
 - 가격은 `src/lib/pricing.ts` 의 `quotePart` 하나로 계산한다 (정가·도매가·거래처 할인·할인 규칙·수량 단계). 규칙은 `src/lib/discounts.ts` 의 `loadActiveRules`.
-- 주문 화면 금액 표시는 `shown()` 으로 부가세 포함. DB 에는 공급가.
+- 주문 화면 금액은 `quotePart` 의 `unit`(포함가) 그대로 모든 거래처에 같게 보인다. 저장은 `supply`(공급가)와 포함가를 함께.
 - 푸시 발송은 `src/lib/push-notify.ts`. 주문 처리 응답을 늦추지 않도록 `after()` 안에서 부른다.
 - 판매 전표 생성은 `src/app/(app)/entry/sale-core.ts` 의 `insertSale` 을 공유한다 (출고 등록·온라인 주문 출고).
 - 거래처 가입 신청은 `src/app/shop/signup-actions.ts`(공개) → 관리자 `src/app/(app)/partners/applications`. 신청 때 만든 auth 계정에 승인 시 `customer_accounts` 를 붙인다. 거래처 코드는 `src/lib/partner-code.ts`.

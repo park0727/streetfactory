@@ -32,7 +32,8 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
         salesDocNo: salesOrders.docNo,
         items: sql<number>`(select count(*)::int from web_order_lines l where l.order_id = web_orders.id)`,
         qty: sql<number>`(select coalesce(sum(l.qty), 0)::int from web_order_lines l where l.order_id = web_orders.id)`,
-        supply: sql<number>`(select coalesce(sum(l.qty * l.unit_price), 0)::numeric from web_order_lines l where l.order_id = web_orders.id)`,
+        // 받을 금액: 포함가가 있으면 그 합계 (src/lib/vat.ts 와 같은 규칙)
+        total: sql<number>`(select coalesce(case when bool_and(l.unit_price_gross is not null) then sum(l.qty * l.unit_price_gross) when web_orders.vat_applied then round(sum(l.qty * l.unit_price) * 1.1) else sum(l.qty * l.unit_price) end, 0)::numeric from web_order_lines l where l.order_id = web_orders.id)`,
       })
       .from(webOrders)
       .innerJoin(partners, eq(partners.id, webOrders.partnerId))
@@ -71,7 +72,6 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
               </TableRow>
             )}
             {rows.map((r) => {
-              const s = Number(r.supply);
               return (
                 <TableRow key={r.id} className={r.status === "pending" ? "bg-status-critical/[0.03] shadow-[inset_3px_0_0_var(--status-critical)]" : ""}>
                   <TableCell className="code">
@@ -84,7 +84,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
                   <TableCell className="font-medium">{r.partnerName}</TableCell>
                   <TableCell className="tabular text-right">{r.items}</TableCell>
                   <TableCell className="tabular text-right">{r.qty}</TableCell>
-                  <TableCell className="tabular text-right font-medium">{krw(r.vatApplied ? Math.round(s * 1.1) : s)}</TableCell>
+                  <TableCell className="tabular text-right font-medium">{krw(Number(r.total))}</TableCell>
                   <TableCell><OrderStatusChip s={r.status} /></TableCell>
                   <TableCell className="max-w-[260px] truncate text-steel">{r.salesDocNo ? `→ ${r.salesDocNo}` : (r.memo ?? "")}</TableCell>
                 </TableRow>

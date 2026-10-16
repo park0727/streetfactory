@@ -9,7 +9,6 @@ export const num = (n: number | string | null | undefined, digits = 0) =>
 /** 12.3% */
 export const pct = (n: number | null | undefined, digits = 1) => `${(n ?? 0).toFixed(digits)}%`;
 /** 부가세 포함가 (10%) */
-export const withVat = (n: number) => Math.round(n * 1.1);
 
 export const VAT_RATE = 0.1;
 export { numFmt };

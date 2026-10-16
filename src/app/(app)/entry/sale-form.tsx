@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/combobox";
-import { krw, pct, num, withVat } from "@/lib/format";
+import { krw, pct, num } from "@/lib/format";
+import { supplyOf } from "@/lib/vat";
 import { PAYMENT_METHOD, PAYMENT_TERMS, type PaymentMethod, type PaymentTerms } from "@/lib/payments-shared";
 import { PartPicker, StockHint, } from "./part-picker";
 import { createSale, updateSale, type PartHit } from "./actions";
@@ -22,7 +23,6 @@ export type SaleInitial = {
   partnerId: number;
   channel: string | null;
   memo: string | null;
-  vatApplied: boolean;
   taxInvoiceIssued: boolean;
   dueDate: string | null;
   paid: number; // 이미 수금된 금액 (수정 시 하한)
@@ -55,7 +55,6 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
   const [terms, setTerms] = useState<PaymentTerms>(initial ? (initial.paid > 0 && initial.dueDate == null ? "immediate" : initial.dueDate ? "credit" : initial.paid > 0 ? "immediate" : "credit") : "immediate");
   const [method, setMethod] = useState<PaymentMethod>("transfer");
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
-  const [vatApplied, setVatApplied] = useState(initial?.vatApplied ?? false);
   const [taxInvoice, setTaxInvoice] = useState(initial?.taxInvoiceIssued ?? false);
   const [lines, setLines] = useState<Line[]>(initial ? initial.lines.map((l) => ({ ...newLine(), part: l.part, qty: l.qty, unitPrice: l.unitPrice })) : [newLine()]);
   // 수정 모드: 이 전표가 이미 차감한 수량은 가용재고에 더해서 본다
@@ -63,16 +62,18 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
   if (initial) for (const l of initial.lines) held.set(l.part.id, (held.get(l.part.id) ?? 0) + l.qty);
   const [pending, start] = useTransition();
 
+  // 단가는 부가세 포함가로 입력한다. 이익은 공급가(포함가 ÷ 1.1) − 원가.
   const totals = useMemo(() => {
-    let amount = 0, cost = 0, qty = 0;
+    let amount = 0, supply = 0, cost = 0, qty = 0;
     for (const l of lines) {
       if (!l.part) continue;
       amount += l.qty * l.unitPrice;
+      supply += l.qty * supplyOf(l.unitPrice);
       cost += l.qty * l.part.avgCost;
       qty += l.qty;
     }
-    const profit = amount - cost;
-    return { amount, cost, qty, profit, margin: amount > 0 ? (profit / amount) * 100 : 0 };
+    const profit = supply - cost;
+    return { amount, supply, vat: amount - supply, cost, qty, profit, margin: supply > 0 ? (profit / supply) * 100 : 0 };
   }, [lines]);
   const avail = (p: PartHit) => p.qty + (held.get(p.id) ?? 0);
   const anyShort = lines.some((l) => l.part && l.qty > avail(l.part));
@@ -83,10 +84,9 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
     const p = partners.find((x) => String(x.id) === v);
     if (p) {
       setTerms(p.defaultTerms);
-      setVatApplied(p.defaultVat);
+      setTaxInvoice(p.defaultVat); // 거래처의 '세금계산서 발행 대상'
     }
   }
-  const receivable = vatApplied ? withVat(totals.amount) : totals.amount;
 
   function update(key: number, patch: Partial<Line>) {
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -109,7 +109,6 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
         terms,
         method,
         dueDate: terms === "credit" && dueDate ? dueDate : undefined,
-        vatApplied,
         taxInvoiceIssued: taxInvoice,
         lines: valid.map((l) => ({ partId: l.part!.id, qty: l.qty, unitPrice: l.unitPrice })),
       };
@@ -174,7 +173,7 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
         <div className="hidden grid-cols-[minmax(0,1fr)_84px_120px_120px_36px] gap-2 px-0.5 sm:grid">
           <span className="th-label">부품</span>
           <span className="th-label text-right">수량</span>
-          <span className="th-label text-right">단가 (₩)</span>
+          <span className="th-label text-right">단가 (부가세 포함)</span>
           <span className="th-label text-right">금액</span>
           <span />
         </div>
@@ -244,17 +243,12 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
             </div>
           )}
           <label className="flex items-center gap-2 self-end pb-2 text-[13px]">
-            <input type="checkbox" className="accent-primary" checked={vatApplied} onChange={(e) => setVatApplied(e.target.checked)} />
-            부가세 별도 청구
-          </label>
-          <label className="flex items-center gap-2 self-end pb-2 text-[13px]">
             <input type="checkbox" className="accent-primary" checked={taxInvoice} onChange={(e) => setTaxInvoice(e.target.checked)} />
             세금계산서 발행
           </label>
         </div>
         <p className="mt-2 text-[12px] text-steel">
-          받을 금액 <b className="tabular text-foreground">{krw(receivable)}</b>
-          {vatApplied ? " (공급가 + 부가세 10%)" : " (부가세 없음)"}
+          받을 금액 <b className="tabular text-foreground">{krw(totals.amount)}</b> (부가세 포함 · 공급가 {krw(totals.supply)} + 부가세 {krw(totals.vat)})
           {editing ? " · 결제 구분과 수금 내역은 전표 상세에서 관리합니다." : terms === "immediate" ? " · 저장 시 출고일자로 수금 처리됩니다." : " · 미수로 남고, 전표 상세에서 수금을 등록합니다."}
         </p>
       </div>
@@ -267,11 +261,11 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
       <div className="rounded-md border bg-muted/40 px-4 py-3">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-4">
           <Sum label="총 수량" value={`${num(totals.qty)}개`} />
-          <Sum label="총 주문금액" value={krw(totals.amount)} strong />
+          <Sum label="총 주문금액 (부가세 포함)" value={krw(totals.amount)} strong />
           <Sum label="예상 매출이익" value={krw(totals.profit)} tone={totals.profit < 0 ? "critical" : undefined} />
           <Sum label="마진율" value={pct(totals.margin)} tone={totals.margin < 0 ? "critical" : undefined} />
         </dl>
-        <p className="mt-2 text-[11.5px] text-steel">이익은 현재 평균원가 기준 예상치이며, 저장 시점 원가가 전표에 고정됩니다. 금액은 부가세 별도.</p>
+        <p className="mt-2 text-[11.5px] text-steel">단가는 부가세 포함가입니다. 이익은 공급가(포함가 ÷ 1.1)에서 현재 평균원가를 뺀 예상치이며, 저장 시점 원가가 전표에 고정됩니다.</p>
       </div>
 
       {anyShort && (

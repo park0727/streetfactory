@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { docTotals } from "@/lib/vat";
 import { Printer, Scissors, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bizNo, krw, num } from "@/lib/format";
@@ -74,8 +75,7 @@ export function DuplexSheet({ docs, sender }: { docs: PrintDoc[]; sender?: Sende
 
 function Half({ d, lines, page, pages, sender, withPrice, title, copy }: { d: PrintDoc; lines: PrintDoc["lines"]; page: number; pages: number; sender?: Sender | null; withPrice: boolean; title: string; copy: string }) {
   const last = page === pages;
-  const supply = d.lines.reduce((a, l) => a + l.qty * l.unitPrice, 0);
-  const vat = d.vatApplied ? Math.round(supply * 0.1) : 0;
+  const { supply, vat } = docTotals(d.lines, d.vatApplied);
   const qty = d.lines.reduce((a, l) => a + l.qty, 0);
   const cols = withPrice ? 6 : 5;
   return (

@@ -5,7 +5,7 @@ import { todayKST } from "@/lib/dates";
 import { BannerCarousel } from "../banner-carousel";
 import { loadActiveRules } from "@/lib/discounts";
 import { getShopSettings, requireCustomer } from "@/lib/shop";
-import { availability, quotePart, shown } from "@/lib/pricing";
+import { availability, quotePart } from "@/lib/pricing";
 import { int, str } from "@/lib/query-params";
 import { CatalogFilters } from "./catalog-filters";
 import { ProductRow } from "./product-row";
@@ -124,8 +124,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   tireSize: r.tireSize,
                   brandName: r.brandName,
                   brandLogo: r.brandLogo,
-                  price: shown(q.unit, me.vatApplied),
-                  list: shown(q.list, me.vatApplied),
+                  price: q.unit,
+                  list: q.list,
                   off: q.off,
                   nextTier: q.nextTier,
                   availability: availability(r.available, r.status),

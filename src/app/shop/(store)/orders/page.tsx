@@ -16,10 +16,10 @@ export default async function MyOrdersPage() {
       id: webOrders.id,
       orderNo: webOrders.orderNo,
       status: webOrders.status,
-      vatApplied: webOrders.vatApplied,
       createdAt: webOrders.createdAt,
       items: sql<number>`(select count(*)::int from web_order_lines l where l.order_id = web_orders.id)`,
-      supply: sql<number>`(select coalesce(sum(l.qty * l.unit_price), 0)::numeric from web_order_lines l where l.order_id = web_orders.id)`,
+      // 결제 금액: 포함가가 있으면 그 합계 (src/lib/vat.ts 와 같은 규칙)
+      total: sql<number>`(select coalesce(case when bool_and(l.unit_price_gross is not null) then sum(l.qty * l.unit_price_gross) when web_orders.vat_applied then round(sum(l.qty * l.unit_price) * 1.1) else sum(l.qty * l.unit_price) end, 0)::numeric from web_order_lines l where l.order_id = web_orders.id)`,
       firstName: sql<string>`(select p.name from web_order_lines l join parts p on p.id = l.part_id where l.order_id = web_orders.id order by l.line_no limit 1)`,
     })
     .from(webOrders)
@@ -35,8 +35,7 @@ export default async function MyOrdersPage() {
       ) : (
         <ul className="divide-y overflow-hidden rounded-md border bg-card">
           {rows.map((r) => {
-            const s = Number(r.supply);
-            const total = r.vatApplied ? Math.round(s * 1.1) : s;
+            const total = Number(r.total);
             return (
               <li key={r.id}>
                 <Link href={`/orders/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40">

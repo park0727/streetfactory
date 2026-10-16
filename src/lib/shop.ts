@@ -15,7 +15,6 @@ export type Customer = {
   partnerName: string;
   priceTier: "retail" | "wholesale";
   discountRate: number;
-  vatApplied: boolean;
 };
 
 /** 현재 로그인한 고객(거래처 주문 계정). 직원이거나 비로그인이면 null. */
@@ -36,7 +35,6 @@ export const getCustomer = cache(async (): Promise<Customer | null> => {
       partnerActive: partners.isActive,
       priceTier: partners.priceTier,
       discountRate: partners.discountRate,
-      vatApplied: partners.defaultVat,
     })
     .from(customerAccounts)
     .innerJoin(partners, eq(partners.id, customerAccounts.partnerId))
@@ -51,7 +49,6 @@ export const getCustomer = cache(async (): Promise<Customer | null> => {
     partnerName: c.partnerName,
     priceTier: c.priceTier,
     discountRate: Number(c.discountRate),
-    vatApplied: c.vatApplied,
   };
 });
 

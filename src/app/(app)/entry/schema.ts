@@ -12,14 +12,13 @@ export const saleSchema = z.object({
   terms: z.enum(["immediate", "credit"]).default("immediate"),
   method: z.enum(["cash", "transfer", "card", "other"]).default("transfer"), // 즉시 결제일 때
   dueDate: dateStr.optional(), // 외상일 때 결제 예정일
-  vatApplied: z.boolean().default(false), // 부가세 별도 청구 → 받을 금액 = 공급가 × 1.1 (기본 해제)
   taxInvoiceIssued: z.boolean().default(false),
   lines: z
     .array(
       z.object({
         partId: z.number().int().positive("부품을 선택하세요."),
         qty: z.number().int().positive("수량은 1 이상이어야 합니다."),
-        unitPrice: z.number().min(0, "단가는 0 이상이어야 합니다."),
+        unitPrice: z.number().min(0, "단가는 0 이상이어야 합니다."), // 부가세 포함 단가. 저장 시 공급가로 나눈다 (src/lib/vat.ts)
       }),
     )
     .min(1, "부품을 한 개 이상 추가하세요.")

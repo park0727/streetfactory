@@ -7,12 +7,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { krw } from "@/lib/format";
-import { shown } from "@/lib/pricing";
 import { AvailabilityChip } from "../../availability-chip";
 import { useCart } from "../../cart-context";
 import { placeOrder, quoteCart, type QuoteLine } from "../../actions";
 
-export function CartClient({ vatApplied }: { vatApplied: boolean }) {
+export function CartClient() {
   const router = useRouter();
   const { items, setQty, remove, clear, ready } = useCart();
   const [quote, setQuote] = useState<Map<number, QuoteLine>>(new Map());
@@ -33,13 +32,12 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig, ready]);
 
-  // 견적의 price 는 공급가. 화면에는 부가세 포함가로 보여준다
+  // 견적 가격은 부가세 포함가 그대로 보여 준다
   const lines = items.map((i) => {
     const q = quote.get(i.partId);
-    return { ...i, supplyPrice: q?.price, price: q ? shown(q.price, vatApplied) : i.price, listShown: q ? shown(q.list, vatApplied) : null, q };
+    return { ...i, price: q ? q.price : i.price, listShown: q ? q.list : null, q };
   });
-  const supply = lines.reduce((a, l) => a + l.qty * (l.supplyPrice ?? l.price), 0);
-  const vat = vatApplied ? Math.round(supply * 0.1) : 0;
+  const total = lines.reduce((a, l) => a + l.qty * l.price, 0);
   const problems = lines.filter((l) => l.q && !l.q.ok);
   // 합계 기준 할인 안내는 규칙마다 한 번만
   const totalHints = [...new Map(lines.flatMap((l) => (l.q?.nextTier?.basis === "total" ? [[l.q.nextTier.ruleName, l.q.nextTier] as const] : []))).values()];
@@ -143,15 +141,15 @@ export function CartClient({ vatApplied }: { vatApplied: boolean }) {
 
       <div className="rounded-md border bg-card p-4">
         <dl className="space-y-1.5 text-[14px]">
-          <div className="flex justify-between"><dt className="text-steel">상품 {items.length}종 · {totalQty}개</dt><dd className="tabular">{krw(supply + vat)}</dd></div>
-          <div className="flex justify-between border-t pt-2 text-[16px] font-semibold"><dt>결제 예정 금액</dt><dd className="tabular">{krw(supply + vat)}</dd></div>
+          <div className="flex justify-between"><dt className="text-steel">상품 {items.length}종 · {totalQty}개</dt><dd className="tabular">{krw(total)}</dd></div>
+          <div className="flex justify-between border-t pt-2 text-[16px] font-semibold"><dt>결제 예정 금액</dt><dd className="tabular">{krw(total)}</dd></div>
         </dl>
         <p className="mt-2 text-[12px] text-steel">주문 후 안내되는 계좌로 입금해 주세요. 담당자가 확인 후 출고합니다.</p>
       </div>
 
       <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] md:bottom-4">
         <Button className="h-12 w-full text-base shadow-lg" disabled={!canOrder || placing} onClick={submit}>
-          {placing ? "주문 접수 중…" : checking ? "재고 확인 중…" : problems.length ? "수량을 조정해 주세요" : `${krw(supply + vat)} 주문하기`}
+          {placing ? "주문 접수 중…" : checking ? "재고 확인 중…" : problems.length ? "수량을 조정해 주세요" : `${krw(total)} 주문하기`}
         </Button>
       </div>
     </div>

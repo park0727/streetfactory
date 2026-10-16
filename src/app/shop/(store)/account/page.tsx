@@ -52,7 +52,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <p className="text-[13px] text-steel">{me.name} · {me.email}</p>
         <p className="mt-1 text-[12.5px] text-steel">
           적용 가격: {PRICE_TIER[me.priceTier]}
-          {me.discountRate > 0 && ` −${me.discountRate}%`} · {me.vatApplied ? "부가세 별도 청구" : "부가세 별도 청구 없음"}
+          {me.discountRate > 0 && ` −${me.discountRate}%`} · 가격은 부가세 포함
         </p>
       </section>
 

@@ -2,7 +2,8 @@
  * RiderMania ERP 데이터 모델 (원본). 설명은 docs/SCHEMA.md 참고.
  *
  * 금액 규칙: 원화는 정수(₩), 외화 단가·환율은 소수 4자리, 원가는 소수 2자리.
- * 모든 금액은 공급가액(부가세 별도).
+ * 부품 마스터의 판매가(권장소비자가·도매가·온라인 판매가)는 부가세 포함가.
+ * 판매 라인 unit_price 는 공급가(포함가 ÷ 1.1), unit_price_gross 는 포함가. 전표 총액 = Σ 포함가 (src/lib/vat.ts).
  */
 import {
   bigint,
@@ -132,7 +133,7 @@ export const partners = pgTable("partners", {
   type: partnerType("type").notNull().default("dealer"),
   bizNo: text("biz_no"), // 사업자등록번호 (세금계산서용), 숫자 10자리 저장
   defaultTerms: paymentTerms("default_terms").notNull().default("immediate"), // 출고 등록 시 자동 선택
-  defaultVat: boolean("default_vat").notNull().default(false), // 부가세 별도 청구(세금계산서) 기본값. 기본 해제
+  defaultVat: boolean("default_vat").notNull().default(false), // 세금계산서 발행 대상 (출고 등록 시 세금계산서 발행 기본값). 가격과는 무관 — 판매가는 모두 부가세 포함
   priceTier: priceTier("price_tier").notNull().default("retail"), // 온라인 주문 기준가
   discountRate: numeric("discount_rate", { precision: 5, scale: 2, mode: "number" }).notNull().default(0), // 기준가에서 추가 할인 %
   contactName: text("contact_name"),
@@ -180,7 +181,8 @@ export const salesLines = pgTable(
       .notNull()
       .references(() => parts.id),
     qty: integer("qty").notNull(),
-    unitPrice: krw("unit_price").notNull(), // 스냅샷
+    unitPrice: krw("unit_price").notNull(), // 스냅샷 (공급가 = 포함가 ÷ 1.1)
+    unitPriceGross: krw("unit_price_gross"), // 부가세 포함 단가 스냅샷. 있으면 전표 총액 = Σ 수량 × 이 값 (src/lib/vat.ts)
     unitCost: cost("unit_cost").notNull(), // 스냅샷 (판매 시점 avg_cost)
   },
   (t) => [index("sales_lines_part_idx").on(t.partId)],
@@ -345,6 +347,7 @@ export const webOrderLines = pgTable(
       .references(() => parts.id),
     qty: integer("qty").notNull(),
     unitPrice: krw("unit_price").notNull(), // 주문 시점 거래처 적용가 스냅샷 (공급가)
+    unitPriceGross: krw("unit_price_gross"), // 부가세 포함 단가 스냅샷 (화면에 보인 가격)
   },
   (t) => [index("web_order_lines_part_idx").on(t.partId)],
 );

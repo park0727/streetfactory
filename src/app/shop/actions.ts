@@ -3,7 +3,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { notifyStaff } from "@/lib/push-notify";
-import { shown } from "@/lib/pricing";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -61,8 +60,8 @@ export type QuoteLine = {
   code: string;
   name: string;
   spec: string | null;
-  price: number; // 이 수량에서의 판매가 (공급가)
-  list: number; // 정가 (공급가)
+  price: number; // 이 수량에서의 판매가 (부가세 포함, 화면 표시·입금 기준)
+  list: number; // 정가 (부가세 포함)
   rate: number; // 적용 할인율
   nextTier: NextTier | null;
   availability: Availability;
@@ -153,11 +152,13 @@ export async function placeOrder(input: z.infer<typeof orderSchema>): Promise<Ac
       const orderNo = await nextDocNo(tx, "WEB", todayKST());
       const [o] = await tx
         .insert(webOrders)
-        .values({ orderNo, partnerId: me.partnerId, customerId: me.id, vatApplied: me.vatApplied, memo: r.data.memo ?? null })
+        .values({ orderNo, partnerId: me.partnerId, customerId: me.id, vatApplied: true, memo: r.data.memo ?? null })
         .returning({ id: webOrders.id });
-      await tx.insert(webOrderLines).values([...need].map(([partId, qty], i) => ({ orderId: o.id, lineNo: i + 1, partId, qty, unitPrice: quotePart(map.get(partId)!, me, rules, qty, totals).unit })));
-      const supply = [...need].reduce((a, [partId, qty]) => a + qty * quotePart(map.get(partId)!, me, rules, qty, totals).unit, 0);
-      return { id: o.id, orderNo, total: shown(supply, me.vatApplied), items: need.size };
+      const quoted = [...need].map(([partId, qty]) => ({ partId, qty, q: quotePart(map.get(partId)!, me, rules, qty, totals) }));
+      // 장부에는 공급가, 화면에 보인 포함가도 함께 둔다 (총액 = Σ 포함가)
+      await tx.insert(webOrderLines).values(quoted.map(({ partId, qty, q }, i) => ({ orderId: o.id, lineNo: i + 1, partId, qty, unitPrice: q.supply, unitPriceGross: q.unit })));
+      const total = quoted.reduce((a, x) => a + x.qty * x.q.unit, 0);
+      return { id: o.id, orderNo, total, items: need.size };
     });
     revalidatePath("/shop/orders");
     revalidatePath("/orders");

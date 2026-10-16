@@ -92,7 +92,7 @@ export function SettlementPanel(p: Props) {
           />
           발행 완료{p.taxInvoiceIssued && p.taxInvoiceDate && <span className="text-steel">· {p.taxInvoiceDate}</span>}
         </label>
-        {!p.vatApplied && <p className="mt-1.5 text-[12px] text-steel">이 전표는 부가세 별도 청구가 꺼져 있습니다.</p>}
+        {!p.vatApplied && <p className="mt-1.5 text-[12px] text-steel">부가세 없이 기록된 예전 전표입니다.</p>}
       </div>
 
       <div className="rounded-md border bg-card">
