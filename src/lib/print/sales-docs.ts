@@ -28,7 +28,7 @@ export async function loadPrintDocs(ids: number[], partnerId?: number) {
   if (orders.length === 0) return [];
   const okIds = orders.map((o) => o.id);
   const lines = await db
-    .select({ orderId: salesLines.orderId, lineNo: salesLines.lineNo, code: parts.code, name: parts.name, spec: parts.spec, qty: salesLines.qty, unitPrice: salesLines.unitPrice, unitPriceGross: salesLines.unitPriceGross })
+    .select({ orderId: salesLines.orderId, lineNo: salesLines.lineNo, code: parts.code, name: parts.name, spec: parts.spec, qty: salesLines.qty, unitPrice: salesLines.unitPrice })
     .from(salesLines)
     .innerJoin(parts, eq(parts.id, salesLines.partId))
     .where(inArray(salesLines.orderId, okIds))

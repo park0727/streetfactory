@@ -36,7 +36,6 @@ export default async function PartnersPage({ searchParams }: PageProps<"/partner
       type: partners.type,
       bizNo: partners.bizNo,
       defaultTerms: partners.defaultTerms,
-      defaultVat: partners.defaultVat,
       priceTier: partners.priceTier,
       discountRate: partners.discountRate,
       contactName: partners.contactName,

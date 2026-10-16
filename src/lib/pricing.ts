@@ -1,6 +1,5 @@
 /**
- * 주문 화면 가격 계산. 서버/클라이언트 공용. 부품 마스터 가격은 부가세 포함가이고, 여기 금액도 모두 포함가 (원 단위 반올림).
- * 장부에 둘 공급가는 supply (= 판매가 ÷ 1.1, src/lib/vat.ts).
+ * 주문 화면 가격 계산. 서버/클라이언트 공용. 금액은 부가세 포함가 그대로 (부품 마스터 가격이 포함가), 원 단위 반올림.
  *
  * 정가(list)  = 온라인 판매가 > 0 ? 온라인 판매가 : 권장소비자가      — 취소선으로 보여주는 기준
  * 기준가(base) = 거래처가 '도매가' 등급이고 도매가 > 0 ? 도매가 : 정가
@@ -8,8 +7,6 @@
  *                규칙 율 = max(기본 %, 같은 상품 수량이 단계 이상일 때의 %)
  * 판매가       = 기준가 × (1 − 할인율)
  */
-import { supplyOf } from "./vat";
-
 export type PriceRule = { priceTier: "retail" | "wholesale"; discountRate: number };
 export type PricePart = { id: number; categoryId: number; brandId: number | null; retailPrice: number; wholesalePrice: number; onlinePrice: number };
 export type RuleTier = { minQty: number; rate: number };
@@ -30,8 +27,7 @@ export type NextTier = RuleTier & { basis: "total" | "line"; ruleName: string; r
 
 export type PriceQuote = {
   list: number; // 정가
-  unit: number; // 이 수량에서의 판매가 (부가세 포함, 거래처에 보이는 가격)
-  supply: number; // 장부용 공급가 = unit ÷ 1.1
+  unit: number; // 이 수량에서의 판매가
   rate: number; // 적용 할인율 (거래처·규칙 중 큰 것)
   off: number; // 정가 대비 표시 할인율 (도매가 차이 포함, 정수 %)
   nextTier: NextTier | null; // 더 사면 받는 다음 단계
@@ -76,7 +72,7 @@ export function quotePart(part: PricePart, partner: PriceRule, rules: ActiveRule
         nextTier = { ...t, basis: r.qtyBasis, ruleName: r.name, remaining: t.minQty - n };
   }
   const off = list > 0 && unit < list ? Math.round((1 - unit / list) * 100) : 0;
-  return { list, unit, supply: supplyOf(unit), rate, off, nextTier };
+  return { list, unit, rate, off, nextTier };
 }
 
 /** 안내 문구: "타이어 할인 상품 합쳐서 10개 이상 사면 10% 할인" / "같은 상품 4개 이상 사면 10% 할인" */

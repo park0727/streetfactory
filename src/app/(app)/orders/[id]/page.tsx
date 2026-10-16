@@ -43,7 +43,7 @@ export default async function OrderDetailPage({ params }: PageProps<"/orders/[id
     .where(eq(webOrders.id, orderId));
   if (!o) notFound();
   const lines = await db
-    .select({ id: webOrderLines.id, lineNo: webOrderLines.lineNo, code: parts.code, name: parts.name, spec: parts.spec, qty: webOrderLines.qty, unitPrice: webOrderLines.unitPrice, unitPriceGross: webOrderLines.unitPriceGross, stock: vInventory.qty })
+    .select({ id: webOrderLines.id, lineNo: webOrderLines.lineNo, code: parts.code, name: parts.name, spec: parts.spec, qty: webOrderLines.qty, unitPrice: webOrderLines.unitPrice, stock: vInventory.qty })
     .from(webOrderLines)
     .innerJoin(parts, eq(parts.id, webOrderLines.partId))
     .innerJoin(vInventory, eq(vInventory.id, webOrderLines.partId))

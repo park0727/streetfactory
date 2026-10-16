@@ -3,9 +3,8 @@ import { useState } from "react";
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bizNo, krw, num } from "@/lib/format";
-import { docTotals } from "@/lib/vat";
 
-type Line = { lineNo: number; code: string; name: string; spec: string | null; qty: number; unitPrice: number; unitPriceGross?: number | null };
+type Line = { lineNo: number; code: string; name: string; spec: string | null; qty: number; unitPrice: number };
 export type PrintDoc = {
   id: number;
   docNo: string;
@@ -67,7 +66,8 @@ export function PrintSheet({ docs, sender, defaultWithPrice = false, allowToggle
 
       <div className="mx-auto max-w-[900px] space-y-8 px-4 py-6 print:max-w-none print:space-y-0 print:p-0">
         {docs.map((d) => {
-          const { supply, vat } = docTotals(d.lines, d.vatApplied);
+          const supply = d.lines.reduce((a, l) => a + l.qty * l.unitPrice, 0);
+          const vat = d.vatApplied ? Math.round(supply * 0.1) : 0;
           const qty = d.lines.reduce((a, l) => a + l.qty, 0);
           return (
             <section key={d.id} className="sheet mx-auto min-h-[297mm] w-[210mm] bg-white p-[14mm_12mm] shadow-md">
@@ -148,16 +148,16 @@ export function PrintSheet({ docs, sender, defaultWithPrice = false, allowToggle
                 </tbody>
                 <tfoot>
                   <tr>
-                    <th colSpan={3} className="text-right">합계</th>
+                    <th colSpan={3} className="text-right">{d.vatApplied ? "합계" : "합계 (부가세 포함)"}</th>
                     <th className="text-right tabular">{num(qty)}</th>
                     {withPrice && <th />}
                     {withPrice && <th className="text-right tabular">{krw(supply)}</th>}
                     {!withPrice && <th />}
                   </tr>
-                  {withPrice && (
+                  {withPrice && d.vatApplied && (
                     <>
                       <tr>
-                        <th colSpan={5} className="text-right">부가세 {d.vatApplied ? "(10%)" : "(없음)"}</th>
+                        <th colSpan={5} className="text-right">부가세 (10%)</th>
                         <th className="text-right tabular">{krw(vat)}</th>
                       </tr>
                       <tr>

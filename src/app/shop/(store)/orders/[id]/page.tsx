@@ -6,7 +6,6 @@ import { db } from "@/db";
 import { parts, salesOrders, webOrderLines, webOrders } from "@/db/schema";
 import { getShopSettings, requireCustomer } from "@/lib/shop";
 import { krw, num } from "@/lib/format";
-import { docTotals, grossOf } from "@/lib/vat";
 import { Button } from "@/components/ui/button";
 import { OrderStatusChip } from "../../../order-status";
 import { CancelOrderButton } from "./cancel-button";
@@ -29,14 +28,16 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
   if (!o) notFound();
   const [lines, settings] = await Promise.all([
     db
-      .select({ lineNo: webOrderLines.lineNo, code: parts.code, name: parts.name, spec: parts.spec, qty: webOrderLines.qty, unitPrice: webOrderLines.unitPrice, unitPriceGross: webOrderLines.unitPriceGross })
+      .select({ lineNo: webOrderLines.lineNo, code: parts.code, name: parts.name, spec: parts.spec, qty: webOrderLines.qty, unitPrice: webOrderLines.unitPrice })
       .from(webOrderLines)
       .innerJoin(parts, eq(parts.id, webOrderLines.partId))
       .where(eq(webOrderLines.orderId, orderId))
       .orderBy(asc(webOrderLines.lineNo)),
     getShopSettings(),
   ]);
-  const { supply, vat, total } = docTotals(lines, o.vatApplied);
+  const supply = lines.reduce((a, l) => a + l.qty * l.unitPrice, 0);
+  const vat = o.vatApplied ? Math.round(supply * 0.1) : 0;
+  const total = supply + vat;
 
   return (
     <div className="space-y-4">
@@ -61,7 +62,7 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
               <span className="tabular text-[24px] font-semibold leading-tight">{krw(total)}</span>
               <CopyButton text={String(total)} label="입금 금액 복사" done="금액을 복사했습니다." />
             </Row>
-            <p className="-mt-2 text-[12px] text-steel">{o.vatApplied ? "부가세 포함 금액" : "부가세 없음"}</p>
+            <p className="-mt-2 text-[12px] text-steel">부가세 포함 금액</p>
             {settings?.bankAccount ? (
               <>
                 {settings.bankName && (
@@ -106,16 +107,20 @@ export default async function MyOrderPage({ params, searchParams }: { params: Pr
                 {l.spec && <p className="text-[12px] text-steel">{l.spec}</p>}
               </div>
               <p className="tabular shrink-0 text-right">
-                <span className="block text-[11.5px] text-steel">{krw(grossOf(l, o.vatApplied))} × {num(l.qty)}</span>
-                <span className="font-medium">{krw(grossOf(l, o.vatApplied) * l.qty)}</span>
+                <span className="block text-[11.5px] text-steel">{krw(l.unitPrice)} × {num(l.qty)}</span>
+                <span className="font-medium">{krw(l.unitPrice * l.qty)}</span>
               </p>
             </li>
           ))}
         </ul>
         <dl className="space-y-1 border-t px-4 py-3 text-[13.5px]">
-          <div className="flex justify-between"><dt className="text-steel">공급가</dt><dd className="tabular">{krw(supply)}</dd></div>
-          <div className="flex justify-between"><dt className="text-steel">부가세</dt><dd className="tabular">{krw(vat)}</dd></div>
-          <div className="flex justify-between text-[15px] font-semibold"><dt>합계</dt><dd className="tabular">{krw(total)}</dd></div>
+          {o.vatApplied && (
+            <>
+              <div className="flex justify-between"><dt className="text-steel">공급가</dt><dd className="tabular">{krw(supply)}</dd></div>
+              <div className="flex justify-between"><dt className="text-steel">부가세</dt><dd className="tabular">{krw(vat)}</dd></div>
+            </>
+          )}
+          <div className="flex justify-between text-[15px] font-semibold"><dt>합계 (부가세 포함)</dt><dd className="tabular">{krw(total)}</dd></div>
         </dl>
         {o.memo && <p className="border-t px-4 py-2.5 text-[13px]"><span className="text-steel">요청 사항</span> {o.memo}</p>}
         {o.status === "cancelled" && o.cancelReason && <p className="border-t px-4 py-2.5 text-[13px] text-status-critical">취소 사유: {o.cancelReason}</p>}

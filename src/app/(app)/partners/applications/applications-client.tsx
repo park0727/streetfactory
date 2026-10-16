@@ -127,7 +127,6 @@ function ApproveDialog({ app, partners, onClose }: { app: AppRow; partners: Part
     priceTier: "retail",
     discountRate: 0,
     defaultTerms: "immediate",
-    defaultVat: false,
   });
   const [discount, setDiscount] = useState("");
   const [accountName, setAccountName] = useState(app.contactName);
@@ -252,9 +251,6 @@ function ApproveDialog({ app, partners, onClose }: { app: AppRow; partners: Part
                   </SelectContent>
                 </Select>
               </div>
-              <label className="flex items-center gap-2 self-end pb-2 text-[13.5px]">
-                <input type="checkbox" className="size-4" checked={p.defaultVat} onChange={(e) => set("defaultVat", e.target.checked)} /> 세금계산서 발행 대상
-              </label>
             </div>
           )}
 

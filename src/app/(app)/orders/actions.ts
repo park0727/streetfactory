@@ -1,5 +1,4 @@
 "use server";
-import { grossOf } from "@/lib/vat";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -69,8 +68,7 @@ export async function shipWebOrder(input: z.infer<typeof shipSchema>): Promise<A
           terms: "credit", // 계좌 입금 전이므로 미수로 잡고, 입금되면 전표 상세에서 수금 등록
           method: "transfer",
           taxInvoiceIssued: false,
-          // 주문 때 거래처가 본 포함가 그대로 (옛 주문은 공급가에서 되살린다)
-          lines: final.sort((a, b) => a.lineNo - b.lineNo).map((l) => ({ partId: l.partId, qty: l.qty, unitPrice: grossOf(l, o.vatApplied) })),
+          lines: final.sort((a, b) => a.lineNo - b.lineNo).map((l) => ({ partId: l.partId, qty: l.qty, unitPrice: l.unitPrice })),
         },
         me.id,
       );

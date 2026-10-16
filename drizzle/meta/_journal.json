@@ -99,6 +99,20 @@
       "when": 1792130714005,
       "tag": "0013_settlement_gross",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792132588492,
+      "tag": "0014_settlement_restore",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792132589038,
+      "tag": "0015_drop_vat_columns",
+      "breakpoints": true
     }
   ]
 }

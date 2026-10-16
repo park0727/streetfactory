@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/auth";
 import { firstIssue, type ActionResult } from "@/lib/action-result";
 import { saleSchema, inboundSchema, type SaleInput, type InboundInput } from "./schema";
-import { insertSale, lineValues, nextDocNo, saleTotal } from "./sale-core";
+import { insertSale, nextDocNo } from "./sale-core";
 
 export type PartHit = {
   id: number;
@@ -107,7 +107,7 @@ export async function updateSale(orderId: number, input: SaleInput): Promise<Act
   if (stockError) return { ok: false, error: stockError };
   // 이미 받은 돈보다 총액이 작아지면 안 된다
   const [st] = await db.select({ paid: vSalesSettlement.paid }).from(vSalesSettlement).where(eq(vSalesSettlement.orderId, orderId));
-  const total = saleTotal(d.lines);
+  const total = d.lines.reduce((a, l) => a + l.qty * Math.round(l.unitPrice), 0);
   if (st && Number(st.paid) > total) return { ok: false, error: `이미 수금한 금액(₩${Number(st.paid).toLocaleString()})이 새 총액(₩${total.toLocaleString()})보다 큽니다. 수금 내역을 먼저 정리하세요.` };
 
   await db.transaction(async (tx) => {
@@ -120,7 +120,7 @@ export async function updateSale(orderId: number, input: SaleInput): Promise<Act
         partnerId: d.partnerId,
         channel: d.channel ?? null,
         memo: d.memo ?? null,
-        vatApplied: true,
+        vatApplied: false,
         taxInvoiceIssued: d.taxInvoiceIssued,
         taxInvoiceDate: d.taxInvoiceIssued ? (o.taxInvoiceDate ?? d.docDate) : null,
         dueDate: d.dueDate ?? null,
@@ -128,7 +128,7 @@ export async function updateSale(orderId: number, input: SaleInput): Promise<Act
       .where(eq(salesOrders.id, orderId));
     // 거래처가 바뀌면 수금의 거래처도 따라간다
     await tx.update(payments).set({ partnerId: d.partnerId }).where(eq(payments.salesOrderId, orderId));
-    await tx.insert(salesLines).values(lineValues(orderId, d.lines));
+    await tx.insert(salesLines).values(d.lines.map((l, i) => ({ orderId, lineNo: i + 1, partId: l.partId, qty: l.qty, unitPrice: Math.round(l.unitPrice), unitCost: 0 })));
     await tx.execute(sql`select public.fn_post_sale(${orderId})`);
   });
   for (const p of ["/entry", "/inventory", "/ledger/sales", `/ledger/sales/${orderId}`, "/ledger/partners", "/partners", "/"]) revalidatePath(p);

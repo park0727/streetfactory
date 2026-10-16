@@ -58,8 +58,8 @@ export function SettlementPanel(p: Props) {
           <PayStatusBadge status={p.payStatus} />
         </div>
         <dl className="space-y-1.5 text-[13px]">
-          <Row k="공급가액" v={krw(p.amountSupply)} />
-          <Row k={p.vatApplied ? "받을 금액 (부가세 포함)" : "받을 금액 (부가세 없음)"} v={krw(p.amountTotal)} strong />
+          {p.vatApplied && <Row k="공급가액" v={krw(p.amountSupply)} />}
+          <Row k="받을 금액 (부가세 포함)" v={krw(p.amountTotal)} strong />
           <Row k="수금 합계" v={krw(p.paid)} />
           <Row k="미수 잔액" v={krw(p.balance)} strong tone={p.balance > 0 ? "critical" : undefined} />
           {p.dueDate && <Row k="결제 예정일" v={p.dueDate} tone={overdue ? "critical" : undefined} />}
@@ -92,7 +92,6 @@ export function SettlementPanel(p: Props) {
           />
           발행 완료{p.taxInvoiceIssued && p.taxInvoiceDate && <span className="text-steel">· {p.taxInvoiceDate}</span>}
         </label>
-        {!p.vatApplied && <p className="mt-1.5 text-[12px] text-steel">부가세 없이 기록된 예전 전표입니다.</p>}
       </div>
 
       <div className="rounded-md border bg-card">

@@ -28,7 +28,6 @@ export type PartnerRow = {
   type: "dealer" | "service_center" | "direct_store" | "online_mall" | "other";
   bizNo: string | null;
   defaultTerms: "immediate" | "credit";
-  defaultVat: boolean;
   priceTier: "retail" | "wholesale";
   discountRate: number;
   balance: number;
@@ -225,9 +224,6 @@ function PartnerDialog({ open, onClose, row }: { open: boolean; onClose: () => v
               <Label htmlFor="pt-memo">메모</Label>
               <Textarea id="pt-memo" name="memo" defaultValue={row?.memo ?? ""} rows={2} maxLength={500} />
             </div>
-            <label className="flex items-center gap-2 text-sm sm:col-span-2">
-              <Checkbox name="defaultVat" value="true" defaultChecked={row?.defaultVat ?? false} /> 세금계산서 발행 대상 (출고 등록 시 &lsquo;세금계산서 발행&rsquo;을 미리 체크)
-            </label>
             <label className="flex items-center gap-2 text-sm sm:col-span-2">
               <Checkbox name="isActive" value="true" defaultChecked={row?.isActive ?? true} /> 거래 중 (출고 등록 목록에 표시)
             </label>

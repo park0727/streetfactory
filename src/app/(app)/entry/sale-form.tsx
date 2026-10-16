@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/combobox";
 import { krw, pct, num } from "@/lib/format";
-import { costExVat, supplyOf } from "@/lib/vat";
 import { PAYMENT_METHOD, PAYMENT_TERMS, type PaymentMethod, type PaymentTerms } from "@/lib/payments-shared";
 import { PartPicker, StockHint, } from "./part-picker";
 import { createSale, updateSale, type PartHit } from "./actions";
@@ -28,7 +27,7 @@ export type SaleInitial = {
   paid: number; // 이미 수금된 금액 (수정 시 하한)
   lines: { part: PartHit; qty: number; unitPrice: number }[];
 };
-export type PartnerOpt = { id: number; name: string; type: string; code: string; defaultTerms: PaymentTerms; defaultVat: boolean };
+export type PartnerOpt = { id: number; name: string; type: string; code: string; defaultTerms: PaymentTerms };
 type Props = {
   partners: PartnerOpt[];
   channels: string[];
@@ -62,18 +61,16 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
   if (initial) for (const l of initial.lines) held.set(l.part.id, (held.get(l.part.id) ?? 0) + l.qty);
   const [pending, start] = useTransition();
 
-  // 단가·원가 모두 부가세 포함으로 입력한다. 이익 = 공급가(포함가 ÷ 1.1) − 원가 ÷ 1.1.
   const totals = useMemo(() => {
-    let amount = 0, supply = 0, cost = 0, qty = 0;
+    let amount = 0, cost = 0, qty = 0;
     for (const l of lines) {
       if (!l.part) continue;
       amount += l.qty * l.unitPrice;
-      supply += l.qty * supplyOf(l.unitPrice);
-      cost += l.qty * costExVat(l.part.avgCost);
+      cost += l.qty * l.part.avgCost;
       qty += l.qty;
     }
-    const profit = supply - cost;
-    return { amount, supply, vat: amount - supply, cost, qty, profit, margin: supply > 0 ? (profit / supply) * 100 : 0 };
+    const profit = amount - cost;
+    return { amount, cost, qty, profit, margin: amount > 0 ? (profit / amount) * 100 : 0 };
   }, [lines]);
   const avail = (p: PartHit) => p.qty + (held.get(p.id) ?? 0);
   const anyShort = lines.some((l) => l.part && l.qty > avail(l.part));
@@ -82,10 +79,7 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
     setPartnerId(v);
     if (editing) return;
     const p = partners.find((x) => String(x.id) === v);
-    if (p) {
-      setTerms(p.defaultTerms);
-      setTaxInvoice(p.defaultVat); // 거래처의 '세금계산서 발행 대상'
-    }
+    if (p) setTerms(p.defaultTerms);
   }
 
   function update(key: number, patch: Partial<Line>) {
@@ -248,7 +242,7 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
           </label>
         </div>
         <p className="mt-2 text-[12px] text-steel">
-          받을 금액 <b className="tabular text-foreground">{krw(totals.amount)}</b> (부가세 포함 · 공급가 {krw(totals.supply)} + 부가세 {krw(totals.vat)})
+          받을 금액 <b className="tabular text-foreground">{krw(totals.amount)}</b> (부가세 포함)
           {editing ? " · 결제 구분과 수금 내역은 전표 상세에서 관리합니다." : terms === "immediate" ? " · 저장 시 출고일자로 수금 처리됩니다." : " · 미수로 남고, 전표 상세에서 수금을 등록합니다."}
         </p>
       </div>
@@ -261,11 +255,11 @@ export function SaleForm({ partners, channels, isAdmin, today, initial, onSaved 
       <div className="rounded-md border bg-muted/40 px-4 py-3">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-4">
           <Sum label="총 수량" value={`${num(totals.qty)}개`} />
-          <Sum label="총 주문금액 (부가세 포함)" value={krw(totals.amount)} strong />
+          <Sum label="총 주문금액" value={krw(totals.amount)} strong />
           <Sum label="예상 매출이익" value={krw(totals.profit)} tone={totals.profit < 0 ? "critical" : undefined} />
           <Sum label="마진율" value={pct(totals.margin)} tone={totals.margin < 0 ? "critical" : undefined} />
         </dl>
-        <p className="mt-2 text-[11.5px] text-steel">단가는 부가세 포함가입니다. 이익은 부가세를 뺀 판매가에서 부가세를 뺀 평균원가를 뺀 예상치(마진의 약 10%가 부가세로 빠짐)이며, 저장 시점 원가가 전표에 고정됩니다.</p>
+        <p className="mt-2 text-[11.5px] text-steel">단가·금액은 부가세 포함입니다. 이익은 현재 평균원가 기준 예상치이며, 저장 시점 원가가 전표에 고정됩니다.</p>
       </div>
 
       {anyShort && (

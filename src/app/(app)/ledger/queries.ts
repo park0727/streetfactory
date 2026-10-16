@@ -1,5 +1,4 @@
 import "server-only";
-import { lineCostExVat, lineProfit } from "@/lib/profit-sql";
 import { and, asc, desc, eq, gte, ilike, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { inboundLines, inboundOrders, parts, partners, salesLines, salesOrders, suppliers } from "@/db/schema";
@@ -27,9 +26,9 @@ export const salesLineSelect = {
   spec: parts.spec,
   qty: salesLines.qty,
   unitPrice: salesLines.unitPrice,
-  unitCost: lineCostExVat, // 부가세 제외 원가 (이익 계산과 같은 값)
+  unitCost: salesLines.unitCost,
   amount: sql<number>`(${salesLines.qty} * ${salesLines.unitPrice})::numeric`,
-  profit: sql<number>`(${lineProfit})::numeric`,
+  profit: sql<number>`(${salesLines.qty} * (${salesLines.unitPrice} - ${salesLines.unitCost}))::numeric`,
 };
 
 export function salesLineQuery(where: SQL | undefined, sort: "date_desc" | "date_asc" | "amount_desc" = "date_desc") {
@@ -51,7 +50,7 @@ export function salesLineSummary(where: SQL | undefined) {
       lines: sql<number>`count(*)::int`,
       qty: sql<number>`coalesce(sum(${salesLines.qty}), 0)::int`,
       amount: sql<number>`coalesce(sum(${salesLines.qty} * ${salesLines.unitPrice}), 0)::numeric`,
-      profit: sql<number>`coalesce(sum(${lineProfit}), 0)::numeric`,
+      profit: sql<number>`coalesce(sum(${salesLines.qty} * (${salesLines.unitPrice} - ${salesLines.unitCost})), 0)::numeric`,
     })
     .from(salesLines)
     .innerJoin(salesOrders, eq(salesOrders.id, salesLines.orderId))

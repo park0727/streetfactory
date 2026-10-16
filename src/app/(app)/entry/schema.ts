@@ -18,7 +18,7 @@ export const saleSchema = z.object({
       z.object({
         partId: z.number().int().positive("부품을 선택하세요."),
         qty: z.number().int().positive("수량은 1 이상이어야 합니다."),
-        unitPrice: z.number().min(0, "단가는 0 이상이어야 합니다."), // 부가세 포함 단가. 저장 시 공급가로 나눈다 (src/lib/vat.ts)
+        unitPrice: z.number().min(0, "단가는 0 이상이어야 합니다."),
       }),
     )
     .min(1, "부품을 한 개 이상 추가하세요.")

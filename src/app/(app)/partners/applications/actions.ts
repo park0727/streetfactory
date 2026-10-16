@@ -28,7 +28,6 @@ const approveSchema = z.object({
     priceTier: z.enum(["retail", "wholesale"]),
     discountRate: z.number().min(0, "할인율은 0 이상").max(90, "할인율은 90% 이하"),
     defaultTerms: z.enum(["immediate", "credit"]),
-    defaultVat: z.boolean(),
   }),
 });
 export type ApproveInput = z.input<typeof approveSchema>;
@@ -70,7 +69,6 @@ export async function approveApplication(input: ApproveInput): Promise<ActionRes
             priceTier: p.priceTier,
             discountRate: p.discountRate,
             defaultTerms: p.defaultTerms,
-            defaultVat: p.defaultVat,
             memo: app.memo ? `가입 신청 메모: ${app.memo}` : null,
           })
           .returning({ id: partners.id });
